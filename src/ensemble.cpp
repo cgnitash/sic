@@ -345,15 +345,15 @@ void
     switch (pwm_order)
     {
       case 3:
-        ofs3 << id << "," << calculate_individual_score_3(sequence_with_data)
+        ofs3 << calculate_individual_score_3(sequence_with_data) << "," << id
              << "\n";
         [[fallthrough]];
       case 2:
-        ofs2 << id << "," << calculate_individual_score_2(sequence_with_data)
+        ofs2 << calculate_individual_score_2(sequence_with_data) << "," << id
              << "\n";
         [[fallthrough]];
       case 1:
-        ofs1 << id << "," << calculate_individual_score_1(sequence_with_data)
+        ofs1 << calculate_individual_score_1(sequence_with_data) << "," << id
              << "\n";
     }
   }

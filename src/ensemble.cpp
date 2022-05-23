@@ -6,6 +6,7 @@
 #include <iostream>
 #include <iterator>
 #include <numeric>
+#include <tuple>
 
 #include "ensemble.hpp"
 
@@ -159,26 +160,20 @@ void
     ofs << symbol;
   }
   ofs << "\n";
-  pwm_2 =
-      std::vector<std::vector<double>>(C(L, 2), std::vector<double>(D * D, 0));
+  pwm_2.clear();   // map had better be empty
   for (auto const &sequence : sequences)
   {
-    int pos = 0;
     for (int i = 0; i < L; ++i)
       for (int j = i + 1; j < L; ++j)
-        pwm_2[pos++][symbol_index(sequence.sequence[i]) * D +
-                     symbol_index(sequence.sequence[j])] +=
+        pwm_2[{ i, j, sequence.sequence[i], sequence.sequence[j] }] +=
             use_weights ? sequence.weight : 1.0;
   }
 
-  for (auto &row : pwm_2)
+  for (auto &[key, val] : pwm_2)
   {
-    for (auto &val : row)
-    {
-      val /= use_weights ? total_weight : sequences.size();
-      ofs << val << " ";
-    }
-    ofs << "\n";
+    val /= use_weights ? total_weight : sequences.size();
+    auto const [i, j, a, b] = key;
+    ofs << i << " " << j << " " << a << " " << b << " " << val << "\n";
   }
 }
 
@@ -201,28 +196,27 @@ void
     ofs << symbol;
   }
   ofs << "\n";
-  pwm_3 = std::vector<std::vector<double>>(C(L, 3),
-                                           std::vector<double>(D * D * D, 0));
+  pwm_3.clear();
   for (auto const &sequence : sequences)
   {
-    int pos = 0;
     for (int i = 0; i < L; ++i)
       for (int j = i + 1; j < L; ++j)
         for (int k = j + 1; k < L; ++k)
-          pwm_3[pos++][symbol_index(sequence.sequence[i]) * D * D +
-                       symbol_index(sequence.sequence[j]) * D +
-                       symbol_index(sequence.sequence[k])] +=
+          pwm_3[{ i,
+                  j,
+                  k,
+                  sequence.sequence[i],
+                  sequence.sequence[i],
+                  sequence.sequence[i] }] +=
               use_weights ? sequence.weight : 1.0;
   }
 
-  for (auto &row : pwm_3)
+  for (auto &[key, val] : pwm_3)
   {
-    for (auto &val : row)
-    {
-      val /= use_weights ? total_weight : sequences.size();
-      ofs << val << " ";
-    }
-    ofs << "\n";
+    val /= use_weights ? total_weight : sequences.size();
+    auto const [i, j, k, a, b, c] = key;
+    ofs << i << " " << j << " " << k << " " << a << " " << b << " " << c << " "
+        << val << "\n";
   }
 }
 
@@ -260,14 +254,15 @@ double
   auto const D     = static_cast<int>(symbol_counts.size());
   auto const L     = static_cast<int>(sequences[0].sequence.size());
   auto       score = 0.;
-  int        pos   = 0;
   for (int i = 0; i < L; ++i)
     for (int j = i + 1; j < L; ++j)
-      score += std::log(D * D *
-                        (pwm_2[pos++][symbol_index(sequence.sequence[i]) * D +
-                                      symbol_index(sequence.sequence[j])] +
-                         c)) /
+    {
+      auto val =
+          pwm_2.find({ i, j, sequence.sequence[i], sequence.sequence[j] });
+
+      score += std::log(D * D * ((val != pwm_2.end() ? val->second : 0.) + c)) /
                std::log(D);
+    }
   return score;
 }
 
@@ -290,17 +285,21 @@ double
   auto const D     = static_cast<int>(symbol_counts.size());
   auto const L     = static_cast<int>(sequences[0].sequence.size());
   auto       score = 0.;
-  int        pos   = 0;
   for (int i = 0; i < L; ++i)
     for (int j = i + 1; j < L; ++j)
       for (int k = j + 1; k < L; ++k)
-        score +=
-            std::log(D * D * D *
-                     (pwm_3[pos++][symbol_index(sequence.sequence[i]) * D * D +
-                                   symbol_index(sequence.sequence[j]) * D +
-                                   symbol_index(sequence.sequence[k])] +
-                      c)) /
-            std::log(D);
+      {
+        auto val = pwm_3.find({ i,
+                                j,
+                                k,
+                                sequence.sequence[i],
+                                sequence.sequence[j],
+                                sequence.sequence[k] });
+
+        score += std::log(D * D * D *
+                          ((val != pwm_3.end() ? val->second : 0.) + c)) /
+                 std::log(D);
+      }
   return score;
 }
 
@@ -332,6 +331,8 @@ void
 
   std::ofstream ofs1{ ensemble_file_name + "." + test_file_name + ".scores_1" };
   std::ofstream ofs2{ ensemble_file_name + "." + test_file_name + ".scores_2" };
+  std::ofstream ofs_sparse_2{ ensemble_file_name + "." + test_file_name +
+                              ".scores_sparse_2" };
   std::ofstream ofs3{ ensemble_file_name + "." + test_file_name + ".scores_3" };
   while (std::getline(ifs, sequence, ',') and std::getline(ifs, weight, ',') and
          std::getline(ifs, id))

@@ -3,10 +3,14 @@
 #include <map>
 #include <set>
 #include <string>
+#include <tuple>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
-struct EnsembleError{};
+struct EnsembleError
+{
+};
 
 class Sequence
 {
@@ -32,22 +36,19 @@ public:
 
   void generate_pwms_and_true_scores(int);
 
-
 private:
   std::string                         ensemble_file_name;
   std::vector<Sequence>               sequences;
   std::map<int, int>                  length_counts;
   std::map<char, std::pair<int, int>> symbol_counts;
-  std::vector<std::vector<double>>    pwm_1;
-  std::vector<std::vector<double>>    pwm_2;
-  std::vector<std::vector<double>>    pwm_3;
   std::vector<char>                   symbols;
-  int pwm_order = 0;
-  // std::vector<double>                 true_scores_1;
-  // std::vector<double>                 true_scores_2;
-  // std::vector<double>                 true_scores_3;
-  double total_weight = 0;
-  bool   use_weights  = false;
+  int                                 pwm_order    = 0;
+  double                              total_weight = 0;
+  bool                                use_weights  = false;
+
+  std::vector<std::vector<double>>                              pwm_1;
+  std::map<std::tuple<int, int, char, char>, double>            pwm_2;
+  std::map<std::tuple<int, int, int, char, char, char>, double> pwm_3;
 
   void   generate_pwm_1();
   void   calculate_true_scores_1();

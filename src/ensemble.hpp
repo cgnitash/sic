@@ -1,4 +1,5 @@
 
+#include <chrono>
 #include <iostream>
 #include <map>
 #include <set>
@@ -42,6 +43,9 @@ private:
   std::map<int, int>                  length_counts;
   std::map<char, std::pair<int, int>> symbol_counts;
   std::vector<char>                   symbols;
+  double                              c;
+  int                                 D;
+  int                                 L;
   int                                 pwm_order    = 0;
   double                              total_weight = 0;
   bool                                use_weights  = false;
@@ -62,6 +66,19 @@ private:
   void   calculate_true_scores_3();
   double calculate_individual_score_3(Sequence const &);
 
+  void parse_pwm_header(std::fstream &);
   bool check_validity(Sequence const &);
+
+  template <typename Func>
+  void
+      timer(Func func)
+  {
+    // from https://en.cppreference.com/w/cpp/chrono
+    auto start = std::chrono::steady_clock::now();
+    (this->*func)();
+    auto                          end = std::chrono::steady_clock::now();
+    std::chrono::duration<double> elapsed_seconds = end - start;
+    std::cout << "elapsed time: " << elapsed_seconds.count() << "s\n";
+  }
 };
 

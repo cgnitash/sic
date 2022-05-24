@@ -51,6 +51,9 @@ void
     std::cout << "Error: ensemble file " << ensemble_file_name << " is empty\n";
     throw EnsembleError{};
   }
+  c = 0.000001;
+  D = static_cast<int>(symbol_counts.size());
+  L = static_cast<int>(sequences[0].sequence.size());
   std::cout << "Ensemble file " << ensemble_file_name
             << " successfully loaded\n";
 }
@@ -90,15 +93,9 @@ void
 void
     Ensemble::generate_pwm_1()
 {
+  std::cout << "Generating PWM of order 1 ...\n" << std::flush;
 
-  if (length_counts.size() != 1)
-  {
-    std::cout << "Error: PWM can only be generated for aligned ensembles\n";
-    throw EnsembleError{};
-  }
   std::ofstream ofs{ ensemble_file_name + ".pwm_1" };
-  auto const    D = static_cast<int>(symbol_counts.size());
-  auto const    L = static_cast<int>(sequences[0].sequence.size());
 
   ofs << D << "\n" << L << "\n";
   for (auto const &symbol : symbols)
@@ -116,20 +113,15 @@ void
     val /= use_weights ? total_weight : sequences.size();
     ofs << i << " " << a << " " << val << "\n";
   }
+  std::cout << " PWM of order 1 generated.\n" << std::flush;
 }
 
 void
     Ensemble::generate_pwm_2()
 {
+  std::cout << "Generating PWM of order 2 ...\n" << std::flush;
 
-  if (length_counts.size() != 1)
-  {
-    std::cout << "Error: PWM can only be generated for aligned ensembles\n";
-    throw EnsembleError{};
-  }
   std::ofstream ofs{ ensemble_file_name + ".pwm_2" };
-  auto const    D = static_cast<int>(symbol_counts.size());
-  auto const    L = static_cast<int>(sequences[0].sequence.size());
 
   ofs << D << "\n" << L << "\n";
   for (auto const &symbol : symbols)
@@ -152,20 +144,15 @@ void
     auto const [i, j, a, b] = key;
     ofs << i << " " << j << " " << a << " " << b << " " << val << "\n";
   }
+  std::cout << " PWM of order 2 generated.\n" << std::flush;
 }
 
 void
     Ensemble::generate_pwm_3()
 {
+  std::cout << "Generating PWM of order 3 ...\n" << std::flush;
 
-  if (length_counts.size() != 1)
-  {
-    std::cout << "Error: PWM can only be generated for aligned ensembles\n";
-    throw EnsembleError{};
-  }
   std::ofstream ofs{ ensemble_file_name + ".pwm_3" };
-  auto const    D = static_cast<int>(symbol_counts.size());
-  auto const    L = static_cast<int>(sequences[0].sequence.size());
 
   ofs << D << "\n" << L << "\n";
   for (auto const &symbol : symbols)
@@ -195,16 +182,14 @@ void
     ofs << i << " " << j << " " << k << " " << a << " " << b << " " << c << " "
         << val << "\n";
   }
+  std::cout << " PWM of order 3 generated.\n" << std::flush;
 }
 
 double
     Ensemble::calculate_individual_score_1(Sequence const &sequence)
 {
 
-  auto const c     = 0.000001;
-  auto const D     = static_cast<int>(symbol_counts.size());
-  auto const L     = static_cast<int>(sequences[0].sequence.size());
-  auto       score = 0.;
+  auto score = 0.;
   for (int i = 0; i < L; ++i)
   {
     auto val = pwm_1.find({ i, sequence.sequence[i] });
@@ -231,10 +216,7 @@ double
     Ensemble::calculate_individual_score_2(Sequence const &sequence)
 {
 
-  auto const c     = 0.000001;
-  auto const D     = static_cast<int>(symbol_counts.size());
-  auto const L     = static_cast<int>(sequences[0].sequence.size());
-  auto       score = 0.;
+  auto score = 0.;
   for (int i = 0; i < L; ++i)
     for (int j = i + 1; j < L; ++j)
     {
@@ -262,10 +244,7 @@ void
 double
     Ensemble::calculate_individual_score_3(Sequence const &sequence)
 {
-  auto const c     = 0.000001;
-  auto const D     = static_cast<int>(symbol_counts.size());
-  auto const L     = static_cast<int>(sequences[0].sequence.size());
-  auto       score = 0.;
+  auto score = 0.;
   for (int i = 0; i < L; ++i)
     for (int j = i + 1; j < L; ++j)
       for (int k = j + 1; k < L; ++k)
@@ -305,7 +284,7 @@ void
     std::cout << "Error: test file " << test_file_name << " not found";
     throw EnsembleError{};
   }
-  std::cout << "Loading test file " << test_file_name << " ...\n";
+  std::cout << "Loading test file " << test_file_name << " ...\n" << std::flush;
   std::string sequence;
   std::string weight;
   std::string id;
@@ -339,24 +318,30 @@ void
              << "\n";
     }
   }
+  std::cout << "All test sequences are scored.\n" << std::flush;
 }
 
 void
     Ensemble::generate_pwms_and_true_scores(int n)
 {
+  if (length_counts.size() != 1)
+  {
+    std::cout << "Error: PWM can only be generated for aligned ensembles\n";
+    throw EnsembleError{};
+  }
   pwm_order = n;
   switch (pwm_order)
   {
     case 3:
-      generate_pwm_3();
+      timer(&Ensemble::generate_pwm_3);
       calculate_true_scores_3();
       [[fallthrough]];
     case 2:
-      generate_pwm_2();
+      timer(&Ensemble::generate_pwm_2);
       calculate_true_scores_2();
       [[fallthrough]];
     case 1:
-      generate_pwm_1();
+      timer(&Ensemble::generate_pwm_1);
       calculate_true_scores_1();
   }
 }
@@ -390,4 +375,11 @@ bool
     return false;
   }
   return true;
+}
+
+void
+    Ensemble::parse_pwm_header(std::fstream &ifs)
+{
+  std::string line;
+  std::getline(ifs, line);
 }

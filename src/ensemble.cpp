@@ -87,24 +87,6 @@ void
   std::cout << std::endl;
 }
 
-int
-    Ensemble::symbol_index(char c) const
-{
-  return std::distance(std::begin(symbols),
-                       std::find(std::begin(symbols), std::end(symbols), c));
-};
-
-int
-    Ensemble::C(int n, int r)
-{
-  int c = 1;
-  for (int i = n - r + 1; i <= n; ++i)
-    c *= i;
-  for (int i = 2; i <= r; ++i)
-    c /= i;
-  return c;
-}
-
 void
     Ensemble::generate_pwm_1()
 {
@@ -124,20 +106,15 @@ void
     ofs << symbol;
   }
   ofs << "\n";
-  pwm_1 = std::vector<std::vector<double>>(L, std::vector<double>(D, 0));
   for (auto const &sequence : sequences)
     for (int i = 0; i < L; ++i)
-      pwm_1[i][symbol_index(sequence.sequence[i])] +=
-          use_weights ? sequence.weight : 1.0;
+      pwm_1[{ i, sequence.sequence[i] }] += use_weights ? sequence.weight : 1.0;
 
-  for (auto &row : pwm_1)
+  for (auto &[key, val] : pwm_1)
   {
-    for (auto &val : row)
-    {
-      val /= use_weights ? total_weight : sequences.size();
-      ofs << val << " ";
-    }
-    ofs << "\n";
+    auto const [i, a] = key;
+    val /= use_weights ? total_weight : sequences.size();
+    ofs << i << " " << a << " " << val << "\n";
   }
 }
 
@@ -229,8 +206,12 @@ double
   auto const L     = static_cast<int>(sequences[0].sequence.size());
   auto       score = 0.;
   for (int i = 0; i < L; ++i)
-    score += std::log(D * (pwm_1[i][symbol_index(sequence.sequence[i])] + c)) /
+  {
+    auto val = pwm_1.find({ i, sequence.sequence[i] });
+
+    score += std::log(D * ((val != pwm_1.end() ? val->second : 0.) + c)) /
              std::log(D);
+  }
   return score;
 }
 

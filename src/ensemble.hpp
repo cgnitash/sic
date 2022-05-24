@@ -46,7 +46,7 @@ private:
   double                              total_weight = 0;
   bool                                use_weights  = false;
 
-  std::vector<std::vector<double>>                              pwm_1;
+  std::map<std::tuple<int, char>, double>                       pwm_1;
   std::map<std::tuple<int, int, char, char>, double>            pwm_2;
   std::map<std::tuple<int, int, int, char, char, char>, double> pwm_3;
 
@@ -61,9 +61,6 @@ private:
   void   generate_pwm_3();
   void   calculate_true_scores_3();
   double calculate_individual_score_3(Sequence const &);
-
-  int symbol_index(char) const;
-  int C(int, int);
 
   bool check_validity(Sequence const &);
 };

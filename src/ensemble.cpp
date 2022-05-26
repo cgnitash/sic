@@ -11,7 +11,7 @@
 #include "ensemble.hpp"
 
 void
-    Ensemble::load(std::string const &fn)
+    Ensemble::load_ensemble(std::string const &fn)
 {
   ensemble_file_name = fn;
   std::ifstream ifs{ ensemble_file_name };
@@ -160,7 +160,7 @@ void
     ofs << symbol;
   }
   ofs << "\n";
-  pwm_3.clear();
+  pwm_3.clear();  // map has to be empty
   for (auto const &sequence : sequences)
   {
     for (int i = 0; i < L; ++i)
@@ -170,8 +170,8 @@ void
                   j,
                   k,
                   sequence.sequence[i],
-                  sequence.sequence[i],
-                  sequence.sequence[i] }] +=
+                  sequence.sequence[j],
+                  sequence.sequence[k] }] +=
               use_weights ? sequence.weight : 1.0;
   }
 
@@ -207,7 +207,6 @@ void
   for (auto const &sequence : sequences)
   {
     auto const score = calculate_individual_score_1(sequence);
-    // true_scores_1.push_back(score);
     ofs << score << "\n";
   }
 }
@@ -236,7 +235,6 @@ void
   for (auto const &sequence : sequences)
   {
     auto const score = calculate_individual_score_2(sequence);
-    // true_scores_2.push_back(score);
     ofs << score << "\n";
   }
 }
@@ -270,7 +268,6 @@ void
   for (auto const &sequence : sequences)
   {
     auto const score = calculate_individual_score_3(sequence);
-    // true_scores_3.push_back(score);
     ofs << score << "\n";
   }
 }
@@ -291,8 +288,6 @@ void
 
   std::ofstream ofs1{ ensemble_file_name + "." + test_file_name + ".scores_1" };
   std::ofstream ofs2{ ensemble_file_name + "." + test_file_name + ".scores_2" };
-  std::ofstream ofs_sparse_2{ ensemble_file_name + "." + test_file_name +
-                              ".scores_sparse_2" };
   std::ofstream ofs3{ ensemble_file_name + "." + test_file_name + ".scores_3" };
   while (std::getline(ifs, sequence, ',') and std::getline(ifs, weight, ',') and
          std::getline(ifs, id))
@@ -380,6 +375,7 @@ bool
 void
     Ensemble::parse_pwm_header(std::fstream &ifs)
 {
+    // to be implemented for loading from existing files
   std::string line;
   std::getline(ifs, line);
 }

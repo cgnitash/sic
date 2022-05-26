@@ -24,7 +24,7 @@ public:
 class Ensemble
 {
 public:
-  void load(std::string const &);
+  void load_ensemble(std::string const &);
   void load_tests(std::string const &fn);
 
   void

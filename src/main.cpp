@@ -37,7 +37,7 @@ try
   auto const args = c.parse_arguments(argc, argv);
 
   Ensemble e;
-  e.load(args.at("Ensemble"));
+  e.load_ensemble(args.at("Ensemble"));
 
   if (auto const summary = args.at("UseWeights");
       summary == "Y" or summary == "yes")

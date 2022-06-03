@@ -13,65 +13,74 @@ struct EnsembleError
 {
 };
 
-class Sequence
+struct SequenceData
 {
-public:
   std::string sequence;
-  double      weight = 0.;
-  std::string id;
+  double      weight;
 };
 
 class Ensemble
 {
 public:
-  void load_ensemble(std::string const &);
-  void load_tests(std::string const &fn);
-
-  void
-      enable_weights()
-  {
-    use_weights = true;
-  }
+  void load_ensemble(std::string,
+                     std::string,
+                     std::string,
+                     std::string,
+                     std::string);
+  // void load_tests(std::string const &fn);
+  void run_tests();
 
   void summary();
 
-  void generate_pwms_and_true_scores(int);
+  void generate_pwms(int);
 
 private:
-  std::string                         ensemble_file_name;
-  std::vector<Sequence>               sequences;
+  std::vector<SequenceData> sequences;
+
+  std::string              file_name;
+  std::vector<std::string> columns;
+  std::string              sequence_field;
+  int                      sequence_field_index;
+  std::string              train_field;
+  int                      train_field_index;
+  std::string              weight_field;
+  int                      weight_field_index;
+  std::string              train_value;
+
   std::map<int, int>                  length_counts;
   std::map<char, std::pair<int, int>> symbol_counts;
   std::vector<char>                   symbols;
-  double                              c;
-  int                                 D;
-  int                                 L;
-  int                                 pwm_order    = 0;
-  double                              total_weight = 0;
-  bool                                use_weights  = false;
+
+  const double c =
+      0.000001;   // should be user-provided eventually, currently hard-coded
+
+  int    D;
+  int    L;
+  int    pwm_order    = 0;
+  double total_weight = 0;
 
   std::map<std::tuple<int, char>, double>                       pwm_1;
   std::map<std::tuple<int, int, char, char>, double>            pwm_2;
   std::map<std::tuple<int, int, int, char, char, char>, double> pwm_3;
 
-  void   generate_pwm_1();
-  void   calculate_true_scores_1();
-  double calculate_individual_score_1(Sequence const &);
+  void generate_pwm_1();
+  // void   calculate_true_scores_1();
+  double calculate_individual_score_1(std::string const &);
 
-  void   generate_pwm_2();
-  void   calculate_true_scores_2();
-  double calculate_individual_score_2(Sequence const &);
+  void generate_pwm_2();
+  // void   calculate_true_scores_2();
+  double calculate_individual_score_2(std::string const &);
 
-  void   generate_pwm_3();
-  void   calculate_true_scores_3();
-  double calculate_individual_score_3(Sequence const &);
+  void generate_pwm_3();
+  // void   calculate_true_scores_3();
+  double calculate_individual_score_3(std::string const &);
 
-  void parse_pwm_header(std::fstream &);
-  bool check_validity(Sequence const &);
+  bool check_validity(std::string const &);
 
   template <typename Func>
   void
       timer(Func func)
+  // should also support functions taking arguments (maybe make it a lambda)
   {
     // from https://en.cppreference.com/w/cpp/chrono
     auto start = std::chrono::steady_clock::now();
@@ -82,3 +91,4 @@ private:
   }
 };
 
+std::vector<std::string> split(std::string const &, char delim = ',');

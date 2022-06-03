@@ -10,23 +10,36 @@ try
 {
   CommandLineArgParser c;
   c.add_argument("Ensemble",
-                 "Ensemble file used to generate PWM",
+                 "Ensemble file containing sequences, and possibly metadata",
                  { "-e", "--ensemble" },
                  {},
                  "");
-  c.add_argument("Test",
-                 "Test file containing sequences to score based on PWM",
-                 { "-t", "--test" },
+  c.add_argument("Sequence Field",
+                 "Column in file containing sequences",
+                 { "-s", "--sequence" },
                  {},
                  "");
-  c.add_argument("UseWeights",
-                 "Should sequences be weighted? (Y/N)",
-                 { "-w", "--use-weights" },
-                 { "Y", "yes", "N", "no" },
-                 "N");
+  c.add_argument("Train Field",
+                 "Select field (column name) used to generate PWMs (no argument will use "
+                 "entire ensemble for training)",
+                 { "-t", "--train-column" },
+                 {},
+                 " ");   // space is sentinel to indicate no argument
+  c.add_argument("Train Value",
+                 "Select value used to generate PWMs (no argument will use "
+                 "entire ensemble for training)",
+                 { "-v", "--train-value" },
+                 {},
+                 " ");   // space is sentinel to indicate no argument
+  c.add_argument(
+      "Weight",
+      "Field used for weighting sequences (no argument uses unit weight)",
+      { "-w", "--weight" },
+      {},
+      " ");   // space is sentinel to indicate no argument
   c.add_argument("Summarize",
-                 "Display summary of ensemble data (Y/N)",
-                 { "-s", "--summarize" },
+                 "Display summary of training data (Y/N)",
+                 { "-k", "--summarize" },   // k is summarize for now
                  { "Y", "yes", "N", "no" },
                  "N");
   c.add_argument("PWMSize",
@@ -37,19 +50,19 @@ try
   auto const args = c.parse_arguments(argc, argv);
 
   Ensemble e;
-  e.load_ensemble(args.at("Ensemble"));
-
-  if (auto const summary = args.at("UseWeights");
-      summary == "Y" or summary == "yes")
-    e.enable_weights();
+  e.load_ensemble(args.at("Sequence Field"),
+                  args.at("Train Field"),
+                  args.at("Train Value"),
+                  args.at("Weight"),
+                  args.at("Ensemble"));
 
   if (auto const summary = args.at("Summarize");
       summary == "Y" or summary == "yes")
     e.summary();
 
-  e.generate_pwms_and_true_scores(std::stoi(args.at("PWMSize")));
+  e.generate_pwms(std::stoi(args.at("PWMSize")));
 
-  e.load_tests(args.at("Test"));
+  e.run_tests();
 }
 catch (RuntimeError const &)
 {

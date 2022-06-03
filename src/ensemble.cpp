@@ -47,8 +47,8 @@ void
 
   std::string line;
   std::getline(ifs, line);
-  columns           = split(line);
-  auto column_index = [&](std::string field) -> int
+  std::vector<std::string> columns      = split(line);
+  auto                     column_index = [&](std::string field) -> int
   {
     if (field == " ")
       return -1;
@@ -95,10 +95,6 @@ void
   while (std::getline(ifs, line))
   {
     auto const row = split(line);
-    // really hope this pop_back isn't needed with split
-    // id.pop_back();   // clear control character ^M (not sure why it's there
-    // in
-    // the first place
 
     if (train_field_index != -1 and row[train_field_index] != train_value)
       continue;
@@ -135,7 +131,7 @@ void
 }
 
 void
-    Ensemble::summary()
+    Ensemble::summary() const
 {
   std::cout << "------\nSummary report for ensemble file " << file_name
             << "\n------\n";
@@ -171,7 +167,8 @@ void
 {
   std::cout << "Generating PWM of order 1 ...\n" << std::flush;
 
-  std::ofstream ofs{ file_name + "." + train_field + "." + train_value +
+  /*
+    std::ofstream ofs{ file_name + "." + train_field + "." + train_value +
                      ".pwm_1" };
 
   ofs << D << "\n" << L << "\n";
@@ -180,15 +177,18 @@ void
     ofs << symbol;
   }
   ofs << "\n";
+  */
+
+  pwm_1.clear();   // map had better be empty
   for (auto const &sequence : sequences)
     for (int i = 0; i < L; ++i)
       pwm_1[{ i, sequence.sequence[i] }] += sequence.weight;
 
   for (auto &[key, val] : pwm_1)
   {
-    auto const [i, a] = key;
     val /= total_weight;
-    ofs << i << " " << a << " " << val << "\n";
+    // auto const [i, a] = key;
+    // ofs << i << " " << a << " " << val << "\n";
   }
   std::cout << " PWM of order 1 generated.\n" << std::flush;
 }
@@ -198,7 +198,8 @@ void
 {
   std::cout << "Generating PWM of order 2 ...\n" << std::flush;
 
-  std::ofstream ofs{ file_name + "." + train_field + "." + train_value +
+  /*
+   std::ofstream ofs{ file_name + "." + train_field + "." + train_value +
                      ".pwm_2" };
 
   ofs << D << "\n" << L << "\n";
@@ -207,6 +208,8 @@ void
     ofs << symbol;
   }
   ofs << "\n";
+  */
+
   pwm_2.clear();   // map had better be empty
   for (auto const &sequence : sequences)
   {
@@ -219,8 +222,8 @@ void
   for (auto &[key, val] : pwm_2)
   {
     val /= total_weight;
-    auto const [i, j, a, b] = key;
-    ofs << i << " " << j << " " << a << " " << b << " " << val << "\n";
+    // auto const [i, j, a, b] = key;
+    // ofs << i << " " << j << " " << a << " " << b << " " << val << "\n";
   }
   std::cout << " PWM of order 2 generated.\n" << std::flush;
 }
@@ -230,6 +233,7 @@ void
 {
   std::cout << "Generating PWM of order 3 ...\n" << std::flush;
 
+  /*
   std::ofstream ofs{ file_name + "." + train_field + "." + train_value +
                      ".pwm_3" };
 
@@ -239,6 +243,8 @@ void
     ofs << symbol;
   }
   ofs << "\n";
+  */
+
   pwm_3.clear();   // map has to be empty
   for (auto const &sequence : sequences)
   {
@@ -256,15 +262,16 @@ void
   for (auto &[key, val] : pwm_3)
   {
     val /= total_weight;
-    auto const [i, j, k, a, b, c] = key;
-    ofs << i << " " << j << " " << k << " " << a << " " << b << " " << c << " "
-        << val << "\n";
+    // auto const [i, j, k, a, b, c] = key;
+    // ofs << i << " " << j << " " << k << " " << a << " " << b << " " << c << "
+    // "
+    //     << val << "\n";
   }
   std::cout << " PWM of order 3 generated.\n" << std::flush;
 }
 
 double
-    Ensemble::calculate_individual_score_1(std::string const &sequence)
+    Ensemble::calculate_individual_score_1(std::string const &sequence) const
 {
 
   auto score = 0.;
@@ -278,21 +285,8 @@ double
   return score;
 }
 
-/*
-void
-    Ensemble::calculate_true_scores_1()
-{
-  std::ofstream ofs{ file_name + ".ts_1" };
-  for (auto const &sequence : sequences)
-  {
-    auto const score = calculate_individual_score_1(sequence.sequence);
-    ofs << score << "\n";
-  }
-}
-*/
-
 double
-    Ensemble::calculate_individual_score_2(std::string const &sequence)
+    Ensemble::calculate_individual_score_2(std::string const &sequence) const
 {
 
   auto score = 0.;
@@ -307,21 +301,8 @@ double
   return score;
 }
 
-/*
-void
-    Ensemble::calculate_true_scores_2()
-{
-  std::ofstream ofs{ file_name + ".ts_2" };
-  for (auto const &sequence : sequences)
-  {
-    auto const score = calculate_individual_score_2(sequence.sequence);
-    ofs << score << "\n";
-  }
-}
-*/
-
 double
-    Ensemble::calculate_individual_score_3(std::string const &sequence)
+    Ensemble::calculate_individual_score_3(std::string const &sequence) const
 {
   auto score = 0.;
   for (int i = 0; i < L; ++i)
@@ -338,21 +319,8 @@ double
   return score;
 }
 
-/*
 void
-    Ensemble::calculate_true_scores_3()
-{
-  std::ofstream ofs{ file_name + ".ts_3" };
-  for (auto const &sequence : sequences)
-  {
-    auto const score = calculate_individual_score_3(sequence.sequence);
-    ofs << score << "\n";
-  }
-}
-*/
-
-void
-    Ensemble::run_tests()
+    Ensemble::run_tests() const
 {
   std::ifstream ifs{ file_name };
   if (not ifs.is_open())
@@ -367,8 +335,7 @@ void
 
   std::string line;
   std::getline(ifs, line);
-  auto col =
-      split(line);   // read header and ignore since this was used in training
+  split(line);   // read header and ignore since this was used in training
   ofs << line;
   switch (pwm_order)
   {
@@ -387,11 +354,8 @@ void
   ofs << "\n";
   while (std::getline(ifs, line))
   {
-    auto const row = split(line);
-    // id.pop_back();
-    //  std::cout << sequence << ":" << weight << ":" << id << "\n";
-    auto sequence = row[sequence_field_index];
-    // auto sequence_with_data = SequenceData({ sequence, std::stod(weight)});
+    auto const row      = split(line);
+    auto       sequence = row[sequence_field_index];
     if (not check_validity(sequence))
       continue;
 
@@ -424,21 +388,18 @@ void
   switch (pwm_order)
   {
     case 3:
-      timer(&Ensemble::generate_pwm_3);
-      //   calculate_true_scores_3();
+      timer([this] { generate_pwm_3(); });
       [[fallthrough]];
     case 2:
-      timer(&Ensemble::generate_pwm_2);
-      //  calculate_true_scores_2();
+      timer([this] { generate_pwm_2(); });
       [[fallthrough]];
     case 1:
-      timer(&Ensemble::generate_pwm_1);
-      // calculate_true_scores_1();
+      timer([this] { generate_pwm_1(); });
   }
 }
 
 bool
-    Ensemble::check_validity(std::string const &sequence)
+    Ensemble::check_validity(std::string const &sequence) const
 {
   if (sequence.length() != sequences[0].sequence.length())
   {

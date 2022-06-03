@@ -19,12 +19,13 @@ try
                  { "-s", "--sequence" },
                  {},
                  "");
-  c.add_argument("Train Field",
-                 "Select field (column name) used to generate PWMs (no argument will use "
-                 "entire ensemble for training)",
-                 { "-t", "--train-column" },
-                 {},
-                 " ");   // space is sentinel to indicate no argument
+  c.add_argument(
+      "Train Field",
+      "Select field (column name) used to generate PWMs (no argument will use "
+      "entire ensemble for training)",
+      { "-t", "--train-column" },
+      {},
+      " ");   // space is sentinel to indicate no argument
   c.add_argument("Train Value",
                  "Select value used to generate PWMs (no argument will use "
                  "entire ensemble for training)",
@@ -62,7 +63,7 @@ try
 
   e.generate_pwms(std::stoi(args.at("PWMSize")));
 
-  e.run_tests();
+  timer([&] { e.run_tests(); });
 }
 catch (RuntimeError const &)
 {

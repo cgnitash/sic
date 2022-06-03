@@ -46,7 +46,7 @@ try
   c.add_argument("PWMSize",
                  "Correlation order for PWM",
                  { "-o", "--order" },
-                 { "1", "2", "3" },
+                 { "1", "2", "3" , "4"},
                  "1");
   auto const args = c.parse_arguments(argc, argv);
 

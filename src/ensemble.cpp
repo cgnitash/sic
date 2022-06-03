@@ -270,6 +270,51 @@ void
   std::cout << " PWM of order 3 generated.\n" << std::flush;
 }
 
+void
+    Ensemble::generate_pwm_4()
+{
+  std::cout << "Generating PWM of order 4 ...\n" << std::flush;
+
+  /*
+  std::ofstream ofs{ file_name + "." + train_field + "." + train_value +
+                     ".pwm_4" };
+
+  ofs << D << "\n" << L << "\n";
+  for (auto const &symbol : symbols)
+  {
+    ofs << symbol;
+  }
+  ofs << "\n";
+  */
+
+  pwm_3.clear();   // map has to be empty
+  for (auto const &sequence : sequences)
+  {
+    for (int i = 0; i < L; ++i)
+      for (int j = i + 1; j < L; ++j)
+        for (int k = j + 1; k < L; ++k)
+        for (int l = k + 1; l < L; ++l)
+          pwm_4[{ i,
+                  j,
+                  k,
+                  l,
+                  sequence.sequence[i],
+                  sequence.sequence[j],
+                  sequence.sequence[k],
+                  sequence.sequence[l] }] += sequence.weight;
+  }
+
+  for (auto &[key, val] : pwm_3)
+  {
+    val /= total_weight;
+    // auto const [i, j, k, l, a, b, c, d] = key;
+    // ofs << i << " " << j << " " << k << " " l << " "  << a << " " << b << " " << c << "
+    // " << d " " 
+    //     << val << "\n";
+  }
+  std::cout << " PWM of order 4 generated.\n" << std::flush;
+}
+
 double
     Ensemble::calculate_individual_score_1(std::string const &sequence) const
 {
@@ -319,6 +364,25 @@ double
   return score;
 }
 
+double
+    Ensemble::calculate_individual_score_4(std::string const &sequence) const
+{
+  auto score = 0.;
+  for (int i = 0; i < L; ++i)
+    for (int j = i + 1; j < L; ++j)
+      for (int k = j + 1; k < L; ++k)
+      for (int l = k + 1; l < L; ++l)
+      {
+        auto val =
+            pwm_4.find({ i, j, k, l, sequence[i], sequence[j], sequence[l],sequence[k] });
+
+        score += std::log(D * D * D *
+                          ((val != pwm_4.end() ? val->second : 0.) + c)) /
+                 std::log(D);
+      }
+  return score;
+}
+
 void
     Ensemble::run_tests() const
 {
@@ -339,6 +403,9 @@ void
   ofs << line;
   switch (pwm_order)
   {
+    case 4:
+      ofs << ",score_4";
+      [[fallthrough]];
     case 3:
       ofs << ",score_3";
       [[fallthrough]];
@@ -362,6 +429,9 @@ void
     ofs << line;
     switch (pwm_order)
     {
+      case 4:
+        ofs << "," << calculate_individual_score_4(sequence);
+        [[fallthrough]];
       case 3:
         ofs << "," << calculate_individual_score_3(sequence);
         [[fallthrough]];
@@ -387,6 +457,9 @@ void
   pwm_order = n;
   switch (pwm_order)
   {
+    case 4:
+      timer([this] { generate_pwm_4(); });
+      [[fallthrough]];
     case 3:
       timer([this] { generate_pwm_3(); });
       [[fallthrough]];

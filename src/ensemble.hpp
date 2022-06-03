@@ -58,6 +58,8 @@ private:
   std::map<std::tuple<int, char>, double>                       pwm_1;
   std::map<std::tuple<int, int, char, char>, double>            pwm_2;
   std::map<std::tuple<int, int, int, char, char, char>, double> pwm_3;
+  std::map<std::tuple<int, int, int, int, char, char, char, char>, double>
+      pwm_4;
 
   void   generate_pwm_1();
   double calculate_individual_score_1(std::string const &) const;
@@ -67,6 +69,9 @@ private:
 
   void   generate_pwm_3();
   double calculate_individual_score_3(std::string const &) const;
+
+  void   generate_pwm_4();
+  double calculate_individual_score_4(std::string const &) const;
 
   bool check_validity(std::string const &) const;
 };

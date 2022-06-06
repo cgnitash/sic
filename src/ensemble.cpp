@@ -116,7 +116,8 @@ void
   std::sample(std::begin(all_sequences),
               std::end(all_sequences),
               std::back_inserter(sequences),
-              static_cast<int>(fraction / 100.0 * all_sequences.size()),
+              static_cast<int>(fraction / 100.0 * all_sequences.size()) +
+                  1,   // guarantee at least one sequence
               gen);
 
   for (auto const &[sequence, weight] : sequences)
@@ -423,7 +424,7 @@ void
 
   std::string line;
   std::getline(ifs, line);
-  ofs << line;
+  ofs << train_field;
   switch (pwm_order)
   {
     case 4:
@@ -449,7 +450,7 @@ void
     if (not check_validity(sequence))
       continue;
 
-    ofs << line;
+    ofs << row[train_field_index];
     switch (pwm_order)
     {
       case 4:

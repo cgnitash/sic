@@ -22,11 +22,13 @@ struct SequenceData
 class Ensemble
 {
 public:
-  void load_ensemble(std::string,
-                     std::string,
-                     std::string,
-                     std::string,
-                     std::string);
+  void load_ensemble(std::string sequence_field,
+                     std::string train_field,
+                     std::string train_value,
+                     int         fraction,
+                     std::string weight_field,
+                     int         replicate,
+                     std::string file_name);
   void run_tests() const;
   void summary() const;
   void generate_pwms(int);
@@ -43,6 +45,8 @@ private:
   std::string                         weight_field;
   int                                 weight_field_index;
   std::string                         train_value;
+  int                                 fraction;
+  int                                 replicate;
   int                                 D;
   int                                 L;
   double                              total_weight = 0;

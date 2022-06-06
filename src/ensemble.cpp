@@ -6,6 +6,7 @@
 #include <iostream>
 #include <iterator>
 #include <numeric>
+#include <random>
 #include <sstream>
 #include <string>
 #include <tuple>
@@ -29,13 +30,17 @@ void
     Ensemble::load_ensemble(std::string sf,
                             std::string tf,
                             std::string tv,
+                            int         tfrac,
                             std::string wf,
+                            int         rpl,
                             std::string fn)
 {
   sequence_field = sf;
+  fraction       = tfrac;
   train_field    = tf;
   train_value    = tv;
   weight_field   = wf;
+  replicate      = rpl;
   file_name      = fn;
   std::ifstream ifs{ file_name };
   if (not ifs.is_open())
@@ -92,6 +97,7 @@ void
     throw EnsembleError{};
   }
 
+  std::vector<SequenceData> all_sequences;
   while (std::getline(ifs, line))
   {
     auto const row = split(line);
@@ -100,11 +106,22 @@ void
       continue;
 
     auto sequence = row[sequence_field_index];
-    sequences.push_back(
+    all_sequences.push_back(
         { sequence,
           weight_field_index == -1 ? 1 : std::stod(row[weight_field_index]) });
+  }
 
-    total_weight += sequences.back().weight;
+  std::mt19937 gen;
+  gen.seed(replicate);
+  std::sample(std::begin(all_sequences),
+              std::end(all_sequences),
+              std::back_inserter(sequences),
+              static_cast<int>(fraction / 100.0 * all_sequences.size()),
+              gen);
+
+  for (auto const &[sequence, weight] : sequences)
+  {
+    total_weight += weight;
 
     std::set<char> uniq_symbols;
     for (auto const &c : sequence)
@@ -293,23 +310,23 @@ void
     for (int i = 0; i < L; ++i)
       for (int j = i + 1; j < L; ++j)
         for (int k = j + 1; k < L; ++k)
-        for (int l = k + 1; l < L; ++l)
-          pwm_4[{ i,
-                  j,
-                  k,
-                  l,
-                  sequence.sequence[i],
-                  sequence.sequence[j],
-                  sequence.sequence[k],
-                  sequence.sequence[l] }] += sequence.weight;
+          for (int l = k + 1; l < L; ++l)
+            pwm_4[{ i,
+                    j,
+                    k,
+                    l,
+                    sequence.sequence[i],
+                    sequence.sequence[j],
+                    sequence.sequence[k],
+                    sequence.sequence[l] }] += sequence.weight;
   }
 
   for (auto &[key, val] : pwm_3)
   {
     val /= total_weight;
     // auto const [i, j, k, l, a, b, c, d] = key;
-    // ofs << i << " " << j << " " << k << " " l << " "  << a << " " << b << " " << c << "
-    // " << d " " 
+    // ofs << i << " " << j << " " << k << " " l << " "  << a << " " << b << " "
+    // << c << " " << d " "
     //     << val << "\n";
   }
   std::cout << " PWM of order 4 generated.\n" << std::flush;
@@ -371,15 +388,21 @@ double
   for (int i = 0; i < L; ++i)
     for (int j = i + 1; j < L; ++j)
       for (int k = j + 1; k < L; ++k)
-      for (int l = k + 1; l < L; ++l)
-      {
-        auto val =
-            pwm_4.find({ i, j, k, l, sequence[i], sequence[j], sequence[l],sequence[k] });
+        for (int l = k + 1; l < L; ++l)
+        {
+          auto val = pwm_4.find({ i,
+                                  j,
+                                  k,
+                                  l,
+                                  sequence[i],
+                                  sequence[j],
+                                  sequence[l],
+                                  sequence[k] });
 
-        score += std::log(D * D * D *
-                          ((val != pwm_4.end() ? val->second : 0.) + c)) /
-                 std::log(D);
-      }
+          score += std::log(D * D * D *
+                            ((val != pwm_4.end() ? val->second : 0.) + c)) /
+                   std::log(D);
+        }
   return score;
 }
 
@@ -394,12 +417,12 @@ void
   }
   std::cout << "Loading test file " << file_name << " ...\n" << std::flush;
 
-  std::ofstream ofs{ file_name + "." + train_field + "." + train_value +
-                     ".scores" };
+  std::ofstream ofs{ file_name + "-" + train_field + "-" + train_value + "-" +
+                     std::to_string(fraction) + "-" +
+                     std::to_string(replicate) + ".scores" };
 
   std::string line;
   std::getline(ifs, line);
-  split(line);   // read header and ignore since this was used in training
   ofs << line;
   switch (pwm_order)
   {

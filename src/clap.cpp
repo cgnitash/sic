@@ -32,15 +32,16 @@ void
                       : std::string{ "Default - " } + argument.default_value)
               << ")\n";
   }
+  std::cout << std::flush;
   throw RuntimeError{};
 }
 void
     CommandLineArgParser::add_argument(
-        std::string const &             name,
-        std::string const &             description,
+        std::string const              &name,
+        std::string const              &description,
         std::vector<std::string> const &aliases,
         std::vector<std::string> const &valid_values,
-        std::string const &             error_message)
+        std::string const              &error_message)
 {
   if (all_names.find(name) != all_names.end())
   {
@@ -116,10 +117,10 @@ void
 {
   for (auto const &[name, value] : args)
   {
-    auto f = std::find_if(
-        std::begin(arguments),
-        std::end(arguments),
-        [name = name](auto const &arg) { return arg.name == name; });
+    auto f = std::find_if(std::begin(arguments),
+                          std::end(arguments),
+                          [name = name](auto const &arg)
+                          { return arg.name == name; });
     if (not f->valid_values.empty() and
         std::find(std::begin(f->valid_values),
                   std::end(f->valid_values),

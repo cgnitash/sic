@@ -1,4 +1,6 @@
 
+#pragma once
+
 #include <algorithm>
 #include <map>
 #include <set>
@@ -33,6 +35,10 @@ private:
   Argument argument_for_alias(std::string const &);
   void     issue_runtime_diagnostic(std::string const &);
 
+  void check_provided_values_are_valid(
+      std::map<std::string, std::string> const &);
+  void check_and_update_defaults(std::map<std::string, std::string> &);
+
 public:
   // should also have a fluent version, or make this fluent, i.e. return *this
   void add_argument(std::string const &             name,
@@ -43,7 +49,4 @@ public:
 
   std::map<std::string, std::string> parse_arguments(int, char **);
 
-  void check_provided_values_are_valid(
-      std::map<std::string, std::string> const &);
-  void check_and_update_defaults(std::map<std::string, std::string> &);
 };

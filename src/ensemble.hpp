@@ -1,4 +1,6 @@
 
+#pragma once
+
 #include <chrono>
 #include <iostream>
 #include <map>
@@ -9,44 +11,21 @@
 #include <utility>
 #include <vector>
 
+namespace sic
+{
 struct EnsembleError
 {
 };
 
-struct SequenceData
+struct Sequence
 {
   std::string sequence;
+  std::string label;
   double      weight;
 };
 
-class Ensemble
+struct Summary
 {
-public:
-  void load_ensemble(std::string sequence_field,
-                     std::string train_field,
-                     std::string train_value,
-                     int         fraction,
-                     std::string weight_field,
-                     int         replicate,
-                     std::string file_name);
-  void run_tests() const;
-  void summary() const;
-  void generate_pwms(int);
-
-private:
-  std::vector<SequenceData> sequences;
-
-  // initialized in load_ensemble
-  std::string                         file_name;
-  std::string                         sequence_field;
-  int                                 sequence_field_index;
-  std::string                         train_field;
-  int                                 train_field_index;
-  std::string                         weight_field;
-  int                                 weight_field_index;
-  std::string                         train_value;
-  int                                 fraction;
-  int                                 replicate;
   int                                 D;
   int                                 L;
   double                              total_weight = 0;
@@ -54,43 +33,51 @@ private:
   std::map<char, std::pair<int, int>> symbol_counts;
   std::vector<char>                   symbols;
 
-  const double c =
-      0.000001;   // should be user-provided eventually, currently hard-coded
-
-  // constructed in generate_pwm*
-  int                                                           pwm_order = 0;
-  std::map<std::tuple<int, char>, double>                       pwm_1;
-  std::map<std::tuple<int, int, char, char>, double>            pwm_2;
-  std::map<std::tuple<int, int, int, char, char, char>, double> pwm_3;
-  std::map<std::tuple<int, int, int, int, char, char, char, char>, double>
-      pwm_4;
-
-  void   generate_pwm_1();
-  double calculate_individual_score_1(std::string const &) const;
-
-  void   generate_pwm_2();
-  double calculate_individual_score_2(std::string const &) const;
-
-  void   generate_pwm_3();
-  double calculate_individual_score_3(std::string const &) const;
-
-  void   generate_pwm_4();
-  double calculate_individual_score_4(std::string const &) const;
-
-  bool check_validity(std::string const &) const;
+  void print() const;
 };
+
+class Ensemble
+{
+  friend class PWM_1;
+  friend class PWM_2;
+  friend class PWM_3;
+  friend class PWM_4;
+
+private:
+  std::vector<Sequence> sequences;
+  Summary               summary;
+
+public:
+  Ensemble(std::vector<Sequence> const &seqs);
+  void print_summary() const;
+  bool
+      lengthsAligned() const
+  {
+    return summary.length_counts.size() == 1;
+  }
+
+  void
+      verify() const
+  {
+    if (not lengthsAligned())
+    {
+      std::cout << "Lengths must be aligned in order to generate PWM. Print "
+                   "Summary for details.\n";
+      throw EnsembleError{};
+    }
+  }
+};
+
+std::vector<Sequence> extractSequencesFromFile(std::string file,
+                                               std::string sequence,
+                                               std::string label,
+                                               std::string weight);
+
+void filter(std::vector<Sequence> &sequences, std::string value);
+
+std::vector<Sequence>
+    sample(std::vector<Sequence> const &sequences, int fraction, int replicate);
 
 std::vector<std::string> split(std::string const &, char delim = ',');
 
-template <typename Func>
-void
-    timer(Func func)
-// should also support functions taking arguments (maybe make it a lambda)
-{
-  // from https://en.cppreference.com/w/cpp/chrono
-  auto start = std::chrono::steady_clock::now();
-  func();
-  auto                          end = std::chrono::steady_clock::now();
-  std::chrono::duration<double> elapsed_seconds = end - start;
-  std::cout << "elapsed time: " << elapsed_seconds.count() << "s\n";
-}
+}   // namespace sic

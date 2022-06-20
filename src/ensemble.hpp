@@ -69,6 +69,7 @@ public:
 };
 
 std::vector<Sequence> extractSequencesFromFile(std::string file,
+                                               std::string delimiter,
                                                std::string sequence,
                                                std::string label,
                                                std::string weight);
@@ -78,6 +79,6 @@ void filter(std::vector<Sequence> &sequences, std::string value);
 std::vector<Sequence>
     sample(std::vector<Sequence> const &sequences, int fraction, int replicate);
 
-std::vector<std::string> split(std::string const &, char delim = ',');
+std::vector<std::string> split(std::string const &, char delim);
 
 }   // namespace sic

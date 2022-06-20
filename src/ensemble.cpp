@@ -30,21 +30,24 @@ std::vector<std::string>
 
 std::vector<Sequence>
     extractSequencesFromFile(std::string file,
+                             std::string delimiter,
                              std::string sequence,
                              std::string label,
                              std::string weight)
 {
+
   std::ifstream ifs{ file };
   if (not ifs.is_open())
   {
-    std::cout << "Error: ensemble file " << file << " not found";
+    std::cout << "Error: file " << file << " not found";
     throw EnsembleError{};
   }
-  std::cout << "Loading ensemble file " << file << " ...\n";
+  std::cout << "Loading file " << file << " ...\n";
 
   std::string line;
+  char const  delim = delimiter[0];   // multi-char delimiters not supported
   std::getline(ifs, line);
-  std::vector<std::string> columns = split(line);
+  std::vector<std::string> columns = split(line, delim);
 
   auto column_index = [&](std::string field) -> int
   {
@@ -74,13 +77,15 @@ std::vector<Sequence>
   std::vector<Sequence> all_sequences;
   while (std::getline(ifs, line))
   {
-    auto const row = split(line);
+    auto const row = split(line, delim);
 
     all_sequences.push_back(
         { row[sequence_index],
           label == "__" ? label : row[label_index],
           weight_index == -1 ? 1 : std::stod(row[weight_index]) });
   }
+
+  std::cout << "File " << file << " succesfully loaded.\n";
 
   return all_sequences;
 }

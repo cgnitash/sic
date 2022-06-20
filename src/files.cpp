@@ -28,6 +28,12 @@ try
                  {},
                  "__");
 
+  c.add_argument("File Delimiter",
+                 "Delimiter between fields of train/test files",
+                 { "-dlm", "--delimiter" },
+                 {},
+                 ",");
+
   c.add_argument("Training File",
                  "Training File containing sequences, labels, and weights",
                  { "-if", "--training-file" },
@@ -104,6 +110,7 @@ try
 
   auto all_seqs =
       sic::extractSequencesFromFile(args.at("Training File"),
+                                    args.at("File Delimiter"),
                                     args.at("Train Sequence Column"),
                                     args.at("Train Label Column"),
                                     args.at("Weight Column"));
@@ -137,6 +144,7 @@ try
 
   auto test_seqs =
       sic::extractSequencesFromFile(args.at("Testing File"),
+                                    args.at("File Delimiter"),
                                     args.at("Test Sequence Column"),
                                     args.at("Test Label Column"),
                                     "__");

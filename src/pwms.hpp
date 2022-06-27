@@ -75,4 +75,11 @@ void test(std::string const                            &out_file_name,
           std::vector<Sequence> const                  &sequences,
           std::tuple<PWM_1, PWM_2, PWM_3, PWM_4> const &pwms,
           int                                           order);
+
+void testA2M(std::string const                            &out_file_name,
+             std::string const                            &train_file,
+             std::string const                            &target,
+             std::tuple<PWM_1, PWM_2, PWM_3, PWM_4> const &pwms,
+             int                                           order,
+             bool                                          ignore_lower);
 }   // namespace sic

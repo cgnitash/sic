@@ -48,14 +48,14 @@ private:
   Summary               summary;
 
 public:
-  Ensemble(std::vector<Sequence> const &seqs);
-  void print_summary() const;
+  Ensemble(std::vector<Sequence> const &seqs, bool ignore_lower = false);
+  void                  print_summary() const;
+  std::vector<Sequence> adjustLower(std::vector<Sequence> seqs);
   bool
       lengthsAligned() const
   {
     return summary.length_counts.size() == 1;
   }
-
   void
       verify() const
   {
@@ -67,6 +67,10 @@ public:
     }
   }
 };
+
+std::string extractSingleA2Msequence(std::istream &is);
+
+std::vector<Sequence> extractA2MSequencesFromFile(std::string file);
 
 std::vector<Sequence> extractSequencesFromFile(std::string file,
                                                std::string delimiter,

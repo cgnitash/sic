@@ -1,10 +1,13 @@
 
+#include <algorithm>
 #include <cassert>
+#include <cctype>
 #include <chrono>
 #include <cmath>
 #include <fstream>
 #include <iostream>
 #include <map>
+#include <regex>
 #include <set>
 #include <string>
 #include <tuple>
@@ -17,7 +20,7 @@
 namespace sic
 {
 
-PWM_1::PWM_1(Ensemble const &ensemble):summary(ensemble.summary)
+PWM_1::PWM_1(Ensemble const &ensemble) : summary(ensemble.summary)
 {
   ensemble.verify();
   auto const L = summary.L;
@@ -32,7 +35,7 @@ PWM_1::PWM_1(Ensemble const &ensemble):summary(ensemble.summary)
   }
 }
 
-PWM_2::PWM_2(Ensemble const &ensemble):summary(ensemble.summary)
+PWM_2::PWM_2(Ensemble const &ensemble) : summary(ensemble.summary)
 {
   ensemble.verify();
   auto const L = summary.L;
@@ -51,7 +54,7 @@ PWM_2::PWM_2(Ensemble const &ensemble):summary(ensemble.summary)
   }
 }
 
-PWM_3::PWM_3(Ensemble const &ensemble):summary(ensemble.summary)
+PWM_3::PWM_3(Ensemble const &ensemble) : summary(ensemble.summary)
 {
   ensemble.verify();
   auto const L = summary.L;
@@ -75,7 +78,7 @@ PWM_3::PWM_3(Ensemble const &ensemble):summary(ensemble.summary)
   }
 }
 
-PWM_4::PWM_4(Ensemble const &ensemble):summary(ensemble.summary)
+PWM_4::PWM_4(Ensemble const &ensemble) : summary(ensemble.summary)
 {
   ensemble.verify();
   auto const L = summary.L;
@@ -201,6 +204,135 @@ std::tuple<PWM_1, PWM_2, PWM_3, PWM_4>
       std::cout << "Error: PWM order must be between 1 and 4\n";
       throw EnsembleError{};
   }
+}
+
+void
+    testA2M(std::string const                            &out_file_name,
+            std::string const                            &train_file,
+            std::string const                            &target,
+            std::tuple<PWM_1, PWM_2, PWM_3, PWM_4> const &pwms,
+            int                                           order,
+            bool                                          ignore_lower)
+{
+  assert(order < 5 and order > 0);
+  std::ofstream ofs{ out_file_name + ".scores" };
+  std::ofstream fails{ out_file_name + ".fails" };
+
+  ofs << "label";
+  switch (order)
+  {
+    case 4:
+      ofs << ",score_4";
+      [[fallthrough]];
+    case 3:
+      ofs << ",score_3";
+      [[fallthrough]];
+    case 2:
+      ofs << ",score_2";
+      [[fallthrough]];
+    case 1:
+      ofs << ",score_1";
+  }
+
+  ofs << "\n";
+  std::ifstream ifs{ train_file };
+  if (not ifs.is_open())
+  {
+    std::cout << "Error: file " << train_file << " not found";
+    throw EnsembleError{};
+  }
+
+  std::vector<int> valid_positions;
+  int              counter = 0;
+  for (unsigned char c : target)
+    valid_positions.push_back(std::islower(c) ? counter : counter++);
+
+  auto true_target = target;
+  if (ignore_lower)
+    true_target.erase(std::remove_if(std::begin(true_target),
+                                     std::end(true_target),
+                                     [](unsigned char c)
+                                     { return std::islower(c); }),
+                      std::end(true_target));
+
+  std::string line;
+  while (std::getline(ifs, line))
+  {
+    if (line[0] == '#')   // skip comments
+      continue;
+    auto col = line.substr(0, line.find(';'));
+    if (col == "mutant")   // skip header
+      continue;
+    auto sequence       = true_target;
+    bool valid_mutation = true;
+    if (col != "WT")
+    {
+      std::regex  r{ R"((\w)(\d+)(\w))" };
+      std::smatch m;
+      if (not std::regex_match(col, m, r))
+      {
+        std::cout << "Error: Not able to match " << col << "\n";
+        throw EnsembleError{};
+      }
+
+      auto index = std::stoi(m[2].str()) - 1;
+
+      if (index >= static_cast<int>(target.length()))
+      {
+        fails << "Skipping: Can't test mutation at position " << index + 1
+              << " when target only contains " << target.length()
+              << " positions" << std::endl;
+        valid_mutation = false;
+      }
+
+      if (target[index] != m[1].str()[0])
+      {
+        fails << "Target sequence does not work for " << col
+              << ", target sequences contains '" << target[index]
+              << "' at that position" << std::endl;
+        valid_mutation = false;
+      }
+      if (ignore_lower and std::islower(target[index]))
+        valid_mutation = false;
+
+      if (valid_mutation)
+      {
+        if (ignore_lower)
+          index = valid_positions[index];
+
+        sequence[index] = m[3].str()[0];
+      }
+    }
+    ofs << col;
+    switch (order)
+    {
+      case 4:
+        if (not valid_mutation)
+          ofs << ",";
+        else
+          ofs << "," << std::get<3>(pwms).evaluate(sequence);
+        [[fallthrough]];
+      case 3:
+        if (not valid_mutation)
+          ofs << ",";
+        else
+          ofs << "," << std::get<2>(pwms).evaluate(sequence);
+        [[fallthrough]];
+      case 2:
+        if (not valid_mutation)
+          ofs << ",";
+        else
+          ofs << "," << std::get<1>(pwms).evaluate(sequence);
+        [[fallthrough]];
+      case 1:
+        if (not valid_mutation)
+          ofs << ",";
+        else
+          ofs << "," << std::get<0>(pwms).evaluate(sequence);
+    }
+    ofs << "\n";
+  }
+  std::cout << "All test sequences are scored.\n" << std::flush;
 }
 
 void

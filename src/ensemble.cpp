@@ -1,5 +1,6 @@
 
 #include <algorithm>
+#include <cctype>
 #include <cmath>
 #include <fstream>
 #include <iomanip>
@@ -118,16 +119,34 @@ std::vector<Sequence>
   return sequences;
 }
 
-Ensemble::Ensemble(std::vector<Sequence> const &seqs)
+std::vector<Sequence>
+    Ensemble::adjustLower(std::vector<Sequence> seqs)
 {
-  sequences = seqs;
+  auto const target  = seqs[0].sequence;
+  for (auto &[sequence, label, weight] : seqs)
+  {
+    std::string fixed_sequence;
+    for (int i = 0; i < static_cast<int>(sequence.length()); ++i)
+      if (not std::islower(target[i]))
+        fixed_sequence.push_back(sequence[i]);
+    sequence = fixed_sequence;
+  }
+  return seqs;
+}
+
+Ensemble::Ensemble(std::vector<Sequence> const &seqs, bool ignore_lower)
+{
+  sequences = ignore_lower ? adjustLower(seqs) : seqs;
+
   if (sequences.empty())
   {
     std::cout << "Error: no sequences provided\n";
     throw EnsembleError{};
   }
+
   for (auto const &[sequence, label, weight] : sequences)
   {
+
     summary.total_weight += weight;
 
     std::set<char> uniq_symbols;
@@ -186,4 +205,36 @@ void
   std::cout << std::endl;
 }
 
+std::string
+    extractSingleA2Msequence(std::istream &is)
+{
+  std::string res, line;
+  while (std::getline(is, line) and line[0] != '>')
+  {
+    res += line;
+  }
+  return res;
+}
+
+std::vector<Sequence>
+    extractA2MSequencesFromFile(std::string file)
+{
+  std::ifstream ifs{ file };
+  if (not ifs.is_open())
+  {
+    std::cout << "Error: file " << file << " not found";
+    throw EnsembleError{};
+  }
+
+  std::string line;
+  std::getline(ifs, line);   // strip first line
+  std::vector<Sequence> result;
+  auto                  target = extractSingleA2Msequence(ifs);
+  result.push_back({ target, "__", 1.0 });
+
+  std::string seq;
+  while (not(seq = extractSingleA2Msequence(ifs)).empty())
+    result.push_back({ seq, "__", 1.0 });
+  return result;
+}
 }   // namespace sic

@@ -29,6 +29,7 @@ PWM_1::PWM_1(Ensemble const &ensemble) : summary(ensemble.summary)
     for (int i = 0; i < L; ++i)
       pwm[{ i, sequence.sequence[i] }] += sequence.weight;
 
+  std::cout << "PWM1 size " << pwm.size() << std::endl;
   for (auto &[key, val] : pwm)
   {
     val /= ensemble.summary.total_weight;
@@ -47,6 +48,8 @@ PWM_2::PWM_2(Ensemble const &ensemble) : summary(ensemble.summary)
         pwm[{ i, j, sequence.sequence[i], sequence.sequence[j] }] +=
             sequence.weight;
   }
+
+  std::cout << "PWM2 size " << pwm.size() << std::endl;
 
   for (auto &[key, val] : pwm)
   {

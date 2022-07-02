@@ -119,24 +119,23 @@ std::vector<Sequence>
   return sequences;
 }
 
-std::vector<Sequence>
-    Ensemble::adjustLower(std::vector<Sequence> seqs)
+void
+    removeLowerCaseResidues(std::vector<Sequence> &sequences,
+                            std::string const     &true_target)
 {
-  auto const target  = seqs[0].sequence;
-  for (auto &[sequence, label, weight] : seqs)
+  for (auto &[sequence, label, weight] : sequences)
   {
     std::string fixed_sequence;
     for (int i = 0; i < static_cast<int>(sequence.length()); ++i)
-      if (not std::islower(target[i]))
+      if (not std::islower(true_target[i]))
         fixed_sequence.push_back(sequence[i]);
     sequence = fixed_sequence;
   }
-  return seqs;
 }
 
-Ensemble::Ensemble(std::vector<Sequence> const &seqs, bool ignore_lower)
+Ensemble::Ensemble(std::vector<Sequence> const &seqs)
 {
-  sequences = ignore_lower ? adjustLower(seqs) : seqs;
+  sequences = seqs;
 
   if (sequences.empty())
   {

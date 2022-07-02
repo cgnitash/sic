@@ -1,7 +1,6 @@
 
 #include <chrono>
 #include <fstream>
-#include <ranges>
 #include <stdexcept>
 
 #include "clap.hpp"
@@ -83,20 +82,28 @@ try
     throw sic::EnsembleError{};
   }
 
+  auto start    = std::chrono::system_clock::now();
   auto all_seqs = sic::extractA2MSequencesFromFile(args.at("Training File"));
 
-  auto const ensemble = sic::Ensemble(all_seqs, true);
+  auto const true_target = all_seqs[0].sequence;
+  removeLowerCaseResidues(all_seqs, true_target);
+
+  auto ensemble = sic::Ensemble(all_seqs);
+
+  auto end = std::chrono::system_clock::now();
+  std::cout << "time to extract and clean ";
+  printTime(end - start);
 
   if (auto const summary = args.at("Summarize");
       summary == "Y" or summary == "yes")
     ensemble.print_summary();
 
-  auto start = std::chrono::system_clock::now();
+  start = std::chrono::system_clock::now();
 
   auto const all_pwms =
       sic::generatePWMs(ensemble, std::stoi(args.at("PWMSize")));
 
-  auto end = std::chrono::system_clock::now();
+  end = std::chrono::system_clock::now();
   std::cout << "time to generate ";
   printTime(end - start);
 
@@ -109,7 +116,7 @@ try
   start = std::chrono::system_clock::now();
   sic::testA2M(out_file_name,
                args.at("Testing File"),
-               all_seqs[0].sequence,
+               true_target,
                all_pwms,
                std::stoi(args.at("PWMSize")),
                true);

@@ -48,9 +48,8 @@ private:
   Summary               summary;
 
 public:
-  Ensemble(std::vector<Sequence> const &seqs, bool ignore_lower = false);
-  void                  print_summary() const;
-  std::vector<Sequence> adjustLower(std::vector<Sequence> seqs);
+  Ensemble(std::vector<Sequence> const &seqs);
+  void print_summary() const;
   bool
       lengthsAligned() const
   {
@@ -67,6 +66,9 @@ public:
     }
   }
 };
+
+void removeLowerCaseResidues(std::vector<Sequence> &sequences,
+                             std::string const     &true_target);
 
 std::string extractSingleA2Msequence(std::istream &is);
 

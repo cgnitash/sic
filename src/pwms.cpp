@@ -345,7 +345,7 @@ void
         if (not valid_mutation)
           ofs << ";";
         else
-          ofs << "," << std::get<1>(pwms).evaluate(sequence);
+          ofs << ";" << std::get<1>(pwms).evaluate(sequence);
         [[fallthrough]];
       case 1:
         if (not valid_mutation)

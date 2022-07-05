@@ -29,7 +29,6 @@ PWM_1::PWM_1(Ensemble const &ensemble) : summary(ensemble.summary)
     for (int i = 0; i < L; ++i)
       pwm[{ i, sequence.sequence[i] }] += sequence.weight;
 
-  std::cout << "PWM1 size " << pwm.size() << std::endl;
   for (auto &[key, val] : pwm)
   {
     val /= ensemble.summary.total_weight;
@@ -48,8 +47,6 @@ PWM_2::PWM_2(Ensemble const &ensemble) : summary(ensemble.summary)
         pwm[{ i, j, sequence.sequence[i], sequence.sequence[j] }] +=
             sequence.weight;
   }
-
-  std::cout << "PWM2 size " << pwm.size() << std::endl;
 
   for (auto &[key, val] : pwm)
   {
@@ -209,12 +206,61 @@ std::tuple<PWM_1, PWM_2, PWM_3, PWM_4>
   }
 }
 
+bool
+    mutateSequence(std::string            &sequence,
+                   std::string const      &mutation,
+                   std::string const      &true_wild_type,
+                   bool                    ignore_lower,
+                   std::vector<int> const &valid_positions,
+                   int                     true_offset,
+                   std::ofstream          &fails)
+{
+  bool        valid_mutation = true;
+  std::regex  r{ R"((\w)(\d+)(\w))" };
+  std::smatch m;
+  if (not std::regex_match(mutation, m, r))
+  {
+    std::cout << "Error: Not able to match " << mutation << "\n";
+    throw EnsembleError{};
+  }
+
+  auto index = std::stoi(m[2].str()) - true_offset;
+
+  if (index >= static_cast<int>(true_wild_type.length()) or index < 0)
+  {
+    fails << "Skipping: Can't test mutation at position " << index + 1
+          << " when target only contains " << true_wild_type.length()
+          << " positions" << std::endl;
+    valid_mutation = false;
+  }
+
+  if (true_wild_type[index] != m[1].str()[0])
+  {
+    fails << "Target sequence does not work for " << mutation
+          << ", target sequences contains '" << true_wild_type[index]
+          << "' at that position" << std::endl;
+    valid_mutation = false;
+  }
+  if (ignore_lower and std::islower(true_wild_type[index]))
+    valid_mutation = false;
+
+  if (valid_mutation)
+  {
+    if (ignore_lower)
+      index = valid_positions[index];
+
+    sequence[index] = m[3].str()[0];
+  }
+  return valid_mutation;
+}
+
 void
     testA2M(std::string const                            &out_file_name,
             std::string const                            &train_file,
-            std::string const                            &target,
+            std::string const                            &true_wild_type,
             std::tuple<PWM_1, PWM_2, PWM_3, PWM_4> const &pwms,
             int                                           order,
+            int                                           true_offset,
             bool                                          ignore_lower)
 {
   assert(order < 5 and order > 0);
@@ -225,16 +271,16 @@ void
   switch (order)
   {
     case 4:
-      ofs << ",score_4";
+      ofs << ";score_4";
       [[fallthrough]];
     case 3:
-      ofs << ",score_3";
+      ofs << ";score_3";
       [[fallthrough]];
     case 2:
-      ofs << ",score_2";
+      ofs << ";score_2";
       [[fallthrough]];
     case 1:
-      ofs << ",score_1";
+      ofs << ";score_1";
   }
 
   ofs << "\n";
@@ -247,16 +293,16 @@ void
 
   std::vector<int> valid_positions;
   int              counter = 0;
-  for (unsigned char c : target)
+  for (unsigned char c : true_wild_type)
     valid_positions.push_back(std::islower(c) ? counter : counter++);
 
-  auto true_target = target;
+  auto wild_type = true_wild_type;
   if (ignore_lower)
-    true_target.erase(std::remove_if(std::begin(true_target),
-                                     std::end(true_target),
-                                     [](unsigned char c)
-                                     { return std::islower(c); }),
-                      std::end(true_target));
+    wild_type.erase(std::remove_if(std::begin(wild_type),
+                                   std::end(wild_type),
+                                   [](unsigned char c)
+                                   { return std::islower(c); }),
+                    std::end(wild_type));
 
   std::string line;
   while (std::getline(ifs, line))
@@ -266,72 +312,46 @@ void
     auto col = line.substr(0, line.find(';'));
     if (col == "mutant")   // skip header
       continue;
-    auto sequence       = true_target;
+    auto sequence       = wild_type;
     bool valid_mutation = true;
-    if (col != "WT")
+    if (col != "WT" and col != "wt")
     {
-      std::regex  r{ R"((\w)(\d+)(\w))" };
-      std::smatch m;
-      if (not std::regex_match(col, m, r))
-      {
-        std::cout << "Error: Not able to match " << col << "\n";
-        throw EnsembleError{};
-      }
-
-      auto index = std::stoi(m[2].str()) - 1;
-
-      if (index >= static_cast<int>(target.length()))
-      {
-        fails << "Skipping: Can't test mutation at position " << index + 1
-              << " when target only contains " << target.length()
-              << " positions" << std::endl;
-        valid_mutation = false;
-      }
-
-      if (target[index] != m[1].str()[0])
-      {
-        fails << "Target sequence does not work for " << col
-              << ", target sequences contains '" << target[index]
-              << "' at that position" << std::endl;
-        valid_mutation = false;
-      }
-      if (ignore_lower and std::islower(target[index]))
-        valid_mutation = false;
-
-      if (valid_mutation)
-      {
-        if (ignore_lower)
-          index = valid_positions[index];
-
-        sequence[index] = m[3].str()[0];
-      }
+      auto const mutations = split(col, ',');
+      for (auto const &mutation : mutations)
+        valid_mutation &= mutateSequence(sequence,
+                                         mutation,
+                                         true_wild_type,
+                                         ignore_lower,
+                                         valid_positions,
+                                         true_offset,
+                                         fails);
     }
     ofs << col;
     switch (order)
     {
       case 4:
         if (not valid_mutation)
-          ofs << ",";
+          ofs << ";";
         else
-          ofs << "," << std::get<3>(pwms).evaluate(sequence);
+          ofs << ";" << std::get<3>(pwms).evaluate(sequence);
         [[fallthrough]];
       case 3:
         if (not valid_mutation)
-          ofs << ",";
+          ofs << ";";
         else
-          ofs << "," << std::get<2>(pwms).evaluate(sequence);
+          ofs << ";" << std::get<2>(pwms).evaluate(sequence);
         [[fallthrough]];
       case 2:
         if (not valid_mutation)
-          ofs << ",";
+          ofs << ";";
         else
           ofs << "," << std::get<1>(pwms).evaluate(sequence);
         [[fallthrough]];
       case 1:
         if (not valid_mutation)
-          ofs << ",";
+          ofs << ";";
         else
-          ofs << "," << std::get<0>(pwms).evaluate(sequence);
+          ofs << ";" << std::get<0>(pwms).evaluate(sequence);
     }
     ofs << "\n";
   }

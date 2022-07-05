@@ -72,7 +72,8 @@ void removeLowerCaseResidues(std::vector<Sequence> &sequences,
 
 std::string extractSingleA2Msequence(std::istream &is);
 
-std::vector<Sequence> extractA2MSequencesFromFile(std::string file);
+std::pair<std::vector<Sequence>, int>
+    extractA2MSequencesFromFile(std::string file);
 
 std::vector<Sequence> extractSequencesFromFile(std::string file,
                                                std::string delimiter,

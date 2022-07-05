@@ -42,6 +42,7 @@ try
                  { "-f", "--fraction" },
                  {},
                  "100");
+
   c.add_argument("Replicate",
                  "Replicate number used as seed for training fraction",
                  { "-r", "--replicate" },
@@ -53,6 +54,7 @@ try
                  { "-s", "--summarize" },
                  { "Y", "yes", "N", "no" },
                  "N");
+
   c.add_argument("PWMSize",
                  "Correlation order for PWM",
                  { "-o", "--order" },
@@ -82,8 +84,12 @@ try
     throw sic::EnsembleError{};
   }
 
-  auto start    = std::chrono::system_clock::now();
-  auto all_seqs = sic::extractA2MSequencesFromFile(args.at("Training File"));
+  auto start = std::chrono::system_clock::now();
+  auto [all_seqs, true_offset] =
+      sic::extractA2MSequencesFromFile(args.at("Training File"));
+
+  std::cout << "\n ---> Training file : " << args.at("Training File");
+  std::cout << "\n ---> Testing file : " << args.at("Testing File");
 
   auto const true_target = all_seqs[0].sequence;
   removeLowerCaseResidues(all_seqs, true_target);
@@ -119,6 +125,7 @@ try
                true_target,
                all_pwms,
                std::stoi(args.at("PWMSize")),
+               true_offset,
                true);
   end = std::chrono::system_clock::now();
   std::cout << "time to test ";

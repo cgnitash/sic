@@ -78,8 +78,17 @@ void test(std::string const                            &out_file_name,
 
 void testA2M(std::string const                            &out_file_name,
              std::string const                            &train_file,
-             std::string const                            &target,
+             std::string const                            &true_wild_type,
              std::tuple<PWM_1, PWM_2, PWM_3, PWM_4> const &pwms,
              int                                           order,
+             int                                           true_offset,
              bool                                          ignore_lower);
+
+bool mutateSequence(std::string            &sequence,
+                    std::string const      &col,
+                    std::string const      &true_wild_type,
+                    bool                    ignore_lower,
+                    std::vector<int> const &valid_positions,
+                    int                     true_offset,
+                    std::ofstream          &fails);
 }   // namespace sic

@@ -8,6 +8,7 @@
 #include <iterator>
 #include <numeric>
 #include <random>
+#include <regex>
 #include <sstream>
 #include <string>
 #include <tuple>
@@ -215,7 +216,7 @@ std::string
   return res;
 }
 
-std::vector<Sequence>
+std::pair<std::vector<Sequence>, int>
     extractA2MSequencesFromFile(std::string file)
 {
   std::ifstream ifs{ file };
@@ -226,7 +227,17 @@ std::vector<Sequence>
   }
 
   std::string line;
-  std::getline(ifs, line);   // strip first line
+  std::getline(ifs, line);
+  std::regex  r{ R"(.*/(\d+)-\d+)" };
+  std::smatch m;
+  if (not std::regex_match(line, m, r))
+  {
+    std::cout << "Error: Cannot compute true offset. a2m file header is: "
+              << line << "\n";
+    throw EnsembleError{};
+  }
+  auto true_offset = std::stoi(m[1].str());
+
   std::vector<Sequence> result;
   auto                  target = extractSingleA2Msequence(ifs);
   result.push_back({ target, "__", 1.0 });
@@ -234,6 +245,7 @@ std::vector<Sequence>
   std::string seq;
   while (not(seq = extractSingleA2Msequence(ifs)).empty())
     result.push_back({ seq, "__", 1.0 });
-  return result;
+
+  return { result, true_offset };
 }
 }   // namespace sic

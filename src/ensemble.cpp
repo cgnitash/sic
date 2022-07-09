@@ -170,7 +170,7 @@ Ensemble::Ensemble(std::vector<Sequence> const &seqs)
 void
     Ensemble::print_summary() const
 {
-  std::cout << "------\nSummary report for ensemble"
+  std::cout << "\n------\nSummary report for ensemble"
             << "\n------\n";
   std::cout << "Ensemble contains " << sequences.size() << " sequences\n";
   summary.print();

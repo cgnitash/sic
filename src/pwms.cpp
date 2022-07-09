@@ -10,6 +10,7 @@
 #include <regex>
 #include <set>
 #include <string>
+#include <thread>
 #include <tuple>
 #include <unordered_map>
 #include <utility>
@@ -20,109 +21,210 @@
 namespace sic
 {
 
-PWM_1::PWM_1(Ensemble const &ensemble) : summary(ensemble.summary)
+PWM_1::PWM_1(Ensemble const &ensemble, bool use_threads)
+    : summary(ensemble.summary)
 {
   ensemble.verify();
   auto const L = summary.L;
-  pwm.clear();   // map had better be empty
-  for (auto const &sequence : ensemble.sequences)
-    for (int i = 0; i < L; ++i)
-      pwm[{ i, sequence.sequence[i] }] += sequence.weight;
-
-  for (auto &[key, val] : pwm)
+  if (not use_threads)
   {
-    val /= ensemble.summary.total_weight;
+    pwm.clear();   // map had better be empty
+    for (auto const &sequence : ensemble.sequences)
+      for (int i = 0; i < L; ++i)
+        pwm[{ i, sequence.sequence[i] }] += sequence.weight;
+
+    for (auto &[key, val] : pwm)
+    {
+      val /= ensemble.summary.total_weight;
+    }
+  }
+  else
+  {
+    pwm_t = std::vector(L, std::map<char, double>{});
+
+    std::vector<std::thread> v;
+    for (int i = 0; i < L; ++i)
+      v.emplace_back(
+          [&, i_t = i]
+          {
+            for (auto const &sequence : ensemble.sequences)
+              pwm_t[i_t][sequence.sequence[i_t]] += sequence.weight;
+
+            for (auto &[key, val] : pwm_t[i_t])
+              val /= ensemble.summary.total_weight;
+          });
+
+    for (int i = 0; i < L; ++i)
+      v[i].join();
   }
 }
 
-PWM_2::PWM_2(Ensemble const &ensemble) : summary(ensemble.summary)
+PWM_2::PWM_2(Ensemble const &ensemble, bool use_threads)
+    : summary(ensemble.summary)
 {
   ensemble.verify();
   auto const L = summary.L;
-  pwm.clear();   // map had better be empty
-  for (auto const &sequence : ensemble.sequences)
+  if (not use_threads)
   {
-    for (int i = 0; i < L; ++i)
-      for (int j = i + 1; j < L; ++j)
-        pwm[{ i, j, sequence.sequence[i], sequence.sequence[j] }] +=
-            sequence.weight;
-  }
+    pwm.clear();   // map had better be empty
+    for (auto const &sequence : ensemble.sequences)
+    {
+      for (int i = 0; i < L; ++i)
+        for (int j = i + 1; j < L; ++j)
+          pwm[{ i, j, sequence.sequence[i], sequence.sequence[j] }] +=
+              sequence.weight;
+    }
 
-  for (auto &[key, val] : pwm)
+    for (auto &[key, val] : pwm)
+    {
+      val /= ensemble.summary.total_weight;
+    }
+  }
+  else
   {
-    val /= ensemble.summary.total_weight;
+    pwm_t = std::vector(L, std::map<std::tuple<int, char, char>, double>{});
+
+    std::vector<std::thread> v;
+    for (int i = 0; i < L; ++i)
+      v.emplace_back(
+          [&, i_t = i]
+          {
+            for (auto const &sequence : ensemble.sequences)
+              for (int j = i_t + 1; j < L; ++j)
+                pwm_t[i_t]
+                     [{ j, sequence.sequence[i_t], sequence.sequence[j] }] +=
+                    sequence.weight;
+
+            for (auto &[key, val] : pwm_t[i_t])
+              val /= ensemble.summary.total_weight;
+          });
+
+    for (int i = 0; i < L; ++i)
+      v[i].join();
   }
 }
 
-PWM_3::PWM_3(Ensemble const &ensemble) : summary(ensemble.summary)
+PWM_3::PWM_3(Ensemble const &ensemble, bool use_threads)
+    : summary(ensemble.summary)
 {
   ensemble.verify();
   auto const L = summary.L;
-  pwm.clear();   // map has to be empty
-  for (auto const &sequence : ensemble.sequences)
-  {
-    for (int i = 0; i < L; ++i)
-      for (int j = i + 1; j < L; ++j)
-        for (int k = j + 1; k < L; ++k)
-          pwm[{ i,
-                j,
-                k,
-                sequence.sequence[i],
-                sequence.sequence[j],
-                sequence.sequence[k] }] += sequence.weight;
-  }
 
-  for (auto &[key, val] : pwm)
+  if (not use_threads)
   {
-    val /= ensemble.summary.total_weight;
-  }
-}
-
-PWM_4::PWM_4(Ensemble const &ensemble) : summary(ensemble.summary)
-{
-  ensemble.verify();
-  auto const L = summary.L;
-  pwm.clear();   // map has to be empty
-  for (auto const &sequence : ensemble.sequences)
-  {
-    for (int i = 0; i < L; ++i)
-      for (int j = i + 1; j < L; ++j)
-        for (int k = j + 1; k < L; ++k)
-          for (int l = k + 1; l < L; ++l)
+    pwm.clear();   // map has to be empty
+    for (auto const &sequence : ensemble.sequences)
+    {
+      for (int i = 0; i < L; ++i)
+        for (int j = i + 1; j < L; ++j)
+          for (int k = j + 1; k < L; ++k)
             pwm[{ i,
                   j,
                   k,
-                  l,
                   sequence.sequence[i],
                   sequence.sequence[j],
-                  sequence.sequence[k],
-                  sequence.sequence[l] }] += sequence.weight;
-  }
+                  sequence.sequence[k] }] += sequence.weight;
+    }
 
-  for (auto &[key, val] : pwm)
+    for (auto &[key, val] : pwm)
+    {
+      val /= ensemble.summary.total_weight;
+    }
+  }
+  else
   {
-    val /= ensemble.summary.total_weight;
+
+    pwm_t = std::vector(
+        L, std::map<std::tuple<int, int, char, char, char>, double>{});
+
+    std::vector<std::thread> v;
+    for (int i = 0; i < L; ++i)
+      v.emplace_back(
+          [&, i_t = i]
+          {
+            for (auto const &sequence : ensemble.sequences)
+              for (int j = i_t + 1; j < L; ++j)
+                for (int k = j + 1; k < L; ++k)
+                  pwm_t[i_t][{ j,
+                               k,
+                               sequence.sequence[i_t],
+                               sequence.sequence[j],
+                               sequence.sequence[k] }] += sequence.weight;
+
+            for (auto &[key, val] : pwm_t[i_t])
+              val /= ensemble.summary.total_weight;
+          });
+
+    for (int i = 0; i < L; ++i)
+      v[i].join();
+  }
+}
+
+PWM_4::PWM_4(Ensemble const &ensemble, bool use_threads)
+    : summary(ensemble.summary)
+{
+  ensemble.verify();
+  auto const L = summary.L;
+  if (not use_threads)
+  {
+    pwm.clear();   // map has to be empty
+    for (auto const &sequence : ensemble.sequences)
+    {
+      for (int i = 0; i < L; ++i)
+        for (int j = i + 1; j < L; ++j)
+          for (int k = j + 1; k < L; ++k)
+            for (int l = k + 1; l < L; ++l)
+              pwm[{ i,
+                    j,
+                    k,
+                    l,
+                    sequence.sequence[i],
+                    sequence.sequence[j],
+                    sequence.sequence[k],
+                    sequence.sequence[l] }] += sequence.weight;
+    }
+
+    for (auto &[key, val] : pwm)
+    {
+      val /= ensemble.summary.total_weight;
+    }
+  }
+  else
+  {
+    std::cout << "Generating PWMs of order 4 with threads not implemented. "
+                 "PWMS of this size are not expected to fit in memory.\n";
+    throw EnsembleError{};
   }
 }
 
 double
-    PWM_1::evaluate(std::string const &sequence) const
+    PWM_1::evaluate(std::string const &sequence, bool use_threads) const
 {
   auto const L     = summary.L;
   auto const D     = summary.D;
   auto       score = 0.;
   for (int i = 0; i < L; ++i)
   {
-    auto val = pwm.find({ i, sequence[i] });
+    if (use_threads)
+    {
+      auto val = pwm_t[i].find(sequence[i]);
 
-    score +=
-        std::log(D * ((val != pwm.end() ? val->second : 0.) + c)) / std::log(D);
+      score += std::log(D * ((val != pwm_t[i].end() ? val->second : 0.) + c)) /
+               std::log(D);
+    }
+    else
+    {
+      auto val = pwm.find({ i, sequence[i] });
+
+      score += std::log(D * ((val != pwm.end() ? val->second : 0.) + c)) /
+               std::log(D);
+    }
   }
   return score;
 }
 
 double
-    PWM_2::evaluate(std::string const &sequence) const
+    PWM_2::evaluate(std::string const &sequence, bool use_threads) const
 {
   auto const L     = summary.L;
   auto const D     = summary.D;
@@ -130,16 +232,27 @@ double
   for (int i = 0; i < L; ++i)
     for (int j = i + 1; j < L; ++j)
     {
-      auto val = pwm.find({ i, j, sequence[i], sequence[j] });
+      if (use_threads)
+      {
+        auto val = pwm_t[i].find({ j, sequence[i], sequence[j] });
 
-      score += std::log(D * D * ((val != pwm.end() ? val->second : 0.) + c)) /
-               std::log(D);
+        score +=
+            std::log(D * D * ((val != pwm_t[i].end() ? val->second : 0.) + c)) /
+            std::log(D);
+      }
+      else
+      {
+        auto val = pwm.find({ i, j, sequence[i], sequence[j] });
+
+        score += std::log(D * D * ((val != pwm.end() ? val->second : 0.) + c)) /
+                 std::log(D);
+      }
     }
   return score;
 }
 
 double
-    PWM_3::evaluate(std::string const &sequence) const
+    PWM_3::evaluate(std::string const &sequence, bool use_threads) const
 {
   auto const L     = summary.L;
   auto const D     = summary.D;
@@ -148,18 +261,36 @@ double
     for (int j = i + 1; j < L; ++j)
       for (int k = j + 1; k < L; ++k)
       {
-        auto val = pwm.find({ i, j, k, sequence[i], sequence[j], sequence[k] });
+        if (use_threads)
+        {
+          auto val =
+              pwm_t[i].find({ j, k, sequence[i], sequence[j], sequence[k] });
 
-        score +=
-            std::log(D * D * D * ((val != pwm.end() ? val->second : 0.) + c)) /
-            std::log(D);
+          score += std::log(D * D * D *
+                            ((val != pwm_t[i].end() ? val->second : 0.) + c)) /
+                   std::log(D);
+        }
+        else
+        {
+          auto val =
+              pwm.find({ i, j, k, sequence[i], sequence[j], sequence[k] });
+
+          score += std::log(D * D * D *
+                            ((val != pwm.end() ? val->second : 0.) + c)) /
+                   std::log(D);
+        }
       }
   return score;
 }
 
 double
-    PWM_4::evaluate(std::string const &sequence) const
+    PWM_4::evaluate(std::string const &sequence, bool use_threads) const
 {
+  if (use_threads)
+  {
+    std::cout << "Error: Can't evaluate with order 4 PWM.\n";
+    throw EnsembleError{};
+  }
   auto const L     = summary.L;
   auto const D     = summary.D;
   auto       score = 0.;
@@ -185,21 +316,26 @@ double
 }
 
 std::tuple<PWM_1, PWM_2, PWM_3, PWM_4>
-    generatePWMs(Ensemble const &ensemble, int order)
+    generatePWMs(Ensemble const &ensemble, int order, bool use_threads)
 {
   switch (order)
   {
     case 1:
-      return { PWM_1{ ensemble }, {}, {}, {} };
+      return { PWM_1{ ensemble, use_threads }, {}, {}, {} };
     case 2:
-      return { PWM_1{ ensemble }, PWM_2{ ensemble }, {}, {} };
+      return {
+        PWM_1{ ensemble, use_threads }, PWM_2{ ensemble, use_threads }, {}, {}
+      };
     case 3:
-      return { PWM_1{ ensemble }, PWM_2{ ensemble }, PWM_3{ ensemble }, {} };
+      return { PWM_1{ ensemble, use_threads },
+               PWM_2{ ensemble, use_threads },
+               PWM_3{ ensemble, use_threads },
+               {} };
     case 4:
-      return { PWM_1{ ensemble },
-               PWM_2{ ensemble },
-               PWM_3{ ensemble },
-               PWM_4{ ensemble } };
+      return { PWM_1{ ensemble, use_threads },
+               PWM_2{ ensemble, use_threads },
+               PWM_3{ ensemble, use_threads },
+               PWM_4{ ensemble, use_threads } };
     default:
       std::cout << "Error: PWM order must be between 1 and 4\n";
       throw EnsembleError{};
@@ -261,7 +397,8 @@ void
             std::tuple<PWM_1, PWM_2, PWM_3, PWM_4> const &pwms,
             int                                           order,
             int                                           true_offset,
-            bool                                          ignore_lower)
+            bool                                          ignore_lower,
+            bool                                          use_threads)
 {
   assert(order < 5 and order > 0);
   std::ofstream ofs{ out_file_name + ".scores" };
@@ -333,25 +470,25 @@ void
         if (not valid_mutation)
           ofs << ";";
         else
-          ofs << ";" << std::get<3>(pwms).evaluate(sequence);
+          ofs << ";" << std::get<3>(pwms).evaluate(sequence, use_threads);
         [[fallthrough]];
       case 3:
         if (not valid_mutation)
           ofs << ";";
         else
-          ofs << ";" << std::get<2>(pwms).evaluate(sequence);
+          ofs << ";" << std::get<2>(pwms).evaluate(sequence, use_threads);
         [[fallthrough]];
       case 2:
         if (not valid_mutation)
           ofs << ";";
         else
-          ofs << ";" << std::get<1>(pwms).evaluate(sequence);
+          ofs << ";" << std::get<1>(pwms).evaluate(sequence, use_threads);
         [[fallthrough]];
       case 1:
         if (not valid_mutation)
           ofs << ";";
         else
-          ofs << ";" << std::get<0>(pwms).evaluate(sequence);
+          ofs << ";" << std::get<0>(pwms).evaluate(sequence, use_threads);
     }
     ofs << "\n";
   }
@@ -391,16 +528,16 @@ void
     switch (order)
     {
       case 4:
-        ofs << "," << std::get<3>(pwms).evaluate(sequence.sequence);
+        ofs << "," << std::get<3>(pwms).evaluate(sequence.sequence, false);
         [[fallthrough]];
       case 3:
-        ofs << "," << std::get<2>(pwms).evaluate(sequence.sequence);
+        ofs << "," << std::get<2>(pwms).evaluate(sequence.sequence, false);
         [[fallthrough]];
       case 2:
-        ofs << "," << std::get<1>(pwms).evaluate(sequence.sequence);
+        ofs << "," << std::get<1>(pwms).evaluate(sequence.sequence, false);
         [[fallthrough]];
       case 1:
-        ofs << "," << std::get<0>(pwms).evaluate(sequence.sequence);
+        ofs << "," << std::get<0>(pwms).evaluate(sequence.sequence, false);
     }
     ofs << "\n";
   }

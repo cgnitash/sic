@@ -61,6 +61,12 @@ try
                  { "1", "2", "3", "4" },
                  "1");
 
+  c.add_argument("Multi Threaded",
+                 "Use multiple threads (Y/N)",
+                 { "-t", "--threads" },
+                 { "Y", "yes", "N", "no" },
+                 "N");
+
   auto const args = c.parse_arguments(argc, argv);
 
   try
@@ -88,8 +94,7 @@ try
   auto [all_seqs, true_offset] =
       sic::extractA2MSequencesFromFile(args.at("Training File"));
 
-  std::cout << "\n ---> Training file : " << args.at("Training File");
-  std::cout << "\n ---> Testing file : " << args.at("Testing File");
+  std::cout << "\n ---> Training file : " << args.at("Training File") << "\n";
 
   auto const true_target = all_seqs[0].sequence;
   removeLowerCaseResidues(all_seqs, true_target);
@@ -104,14 +109,17 @@ try
       summary == "Y" or summary == "yes")
     ensemble.print_summary();
 
+  auto const thread_arg  = args.at("Multi Threaded");
+  auto const use_threads = thread_arg == "Y" or thread_arg == "yes";
+
   start = std::chrono::system_clock::now();
-
   auto const all_pwms =
-      sic::generatePWMs(ensemble, std::stoi(args.at("PWMSize")));
-
+      sic::generatePWMs(ensemble, std::stoi(args.at("PWMSize")), use_threads);
   end = std::chrono::system_clock::now();
   std::cout << "time to generate ";
   printTime(end - start);
+
+  std::cout << "\n ---> Testing file : " << args.at("Testing File") << "\n";
 
   auto out_file_name = args.at("Testing File");
   if (auto slash = out_file_name.find_last_of('/'); slash != std::string::npos)
@@ -126,7 +134,8 @@ try
                all_pwms,
                std::stoi(args.at("PWMSize")),
                true_offset,
-               true);
+               true,
+               use_threads);
   end = std::chrono::system_clock::now();
   std::cout << "time to test ";
   printTime(end - start);

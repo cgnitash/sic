@@ -134,7 +134,6 @@ try
                all_pwms,
                std::stoi(args.at("PWMSize")),
                true_offset,
-               true,
                use_threads);
   end = std::chrono::system_clock::now();
   std::cout << "time to test ";

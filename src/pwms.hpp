@@ -70,6 +70,13 @@ public:
   PWM_4() = default;
 };
 
+struct Mutant
+{
+  std::string                        descriptor;
+  std::vector<std::tuple<int, char>> mutations;
+  bool                               valid_mutation;
+};
+
 std::tuple<PWM_1, PWM_2, PWM_3, PWM_4>
     generatePWMs(Ensemble const &ensemble, int order, bool use_threads);
 
@@ -85,14 +92,19 @@ void testA2M(std::string const                            &out_file_name,
              std::tuple<PWM_1, PWM_2, PWM_3, PWM_4> const &pwms,
              int                                           order,
              int                                           true_offset,
-             bool                                          ignore_lower,
              bool                                          use_threads);
 
 bool mutateSequence(std::string            &sequence,
                     std::string const      &col,
                     std::string const      &true_wild_type,
-                    bool                    ignore_lower,
                     std::vector<int> const &valid_positions,
                     int                     true_offset,
                     std::ofstream          &fails);
+
+std::vector<Mutant> generateMutants(std::string const      &train_file,
+                                    std::string const      &true_wild_type,
+                                    std::vector<int> const &valid_positions,
+                                    int                     true_offset,
+                                    std::ofstream          &fails);
+
 }   // namespace sic

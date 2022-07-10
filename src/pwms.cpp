@@ -342,14 +342,12 @@ std::tuple<PWM_1, PWM_2, PWM_3, PWM_4>
   }
 }
 
-bool
-    mutateSequence(std::string            &sequence,
-                   std::string const      &mutation,
-                   std::string const      &true_wild_type,
-                   bool                    ignore_lower,
-                   std::vector<int> const &valid_positions,
-                   int                     true_offset,
-                   std::ofstream          &fails)
+std::tuple<int, char, bool>
+    checkValidMutation(std::string const      &mutation,
+                       std::string const      &true_wild_type,
+                       std::vector<int> const &valid_positions,
+                       int                     true_offset,
+                       std::ofstream          &fails)
 {
   bool        valid_mutation = true;
   std::regex  r{ R"((\w)(\d+)(\w))" };
@@ -377,17 +375,58 @@ bool
           << "' at that position" << std::endl;
     valid_mutation = false;
   }
-  if (ignore_lower and std::islower(true_wild_type[index]))
+  if (std::islower(true_wild_type[index]))
     valid_mutation = false;
 
   if (valid_mutation)
   {
-    if (ignore_lower)
-      index = valid_positions[index];
-
-    sequence[index] = m[3].str()[0];
+    index = valid_positions[index];
   }
-  return valid_mutation;
+  return { index, m[3].str()[0], valid_mutation };
+}
+
+std::vector<Mutant>
+    generateMutants(std::string const      &train_file,
+                    std::string const      &true_wild_type,
+                    std::vector<int> const &valid_positions,
+                    int                     true_offset,
+                    std::ofstream          &fails)
+{
+  std::vector<Mutant> mutants;
+
+  std::ifstream ifs{ train_file };
+  if (not ifs.is_open())
+  {
+    std::cout << "Error: file " << train_file << " not found";
+    throw EnsembleError{};
+  }
+
+  std::string line;
+  while (std::getline(ifs, line))
+  {
+    if (line[0] == '#')   // skip comments
+      continue;
+    auto col = line.substr(0, line.find(';'));
+    if (col == "mutant")   // skip header
+      continue;
+    Mutant mutant;
+    mutant.valid_mutation = true;
+    mutant.descriptor     = col;
+    if (col != "WT" and col != "wt")
+    {
+      auto const mutations = split(col, ',');
+      for (auto const &mutation : mutations)
+      {
+        auto const [position, replacement, valid_mutation] = checkValidMutation(
+            mutation, true_wild_type, valid_positions, true_offset, fails);
+
+        mutant.valid_mutation &= valid_mutation;
+        mutant.mutations.push_back({ position, replacement });
+      }
+    }
+    mutants.push_back(mutant);
+  }
+  return mutants;
 }
 
 void
@@ -397,12 +436,10 @@ void
             std::tuple<PWM_1, PWM_2, PWM_3, PWM_4> const &pwms,
             int                                           order,
             int                                           true_offset,
-            bool                                          ignore_lower,
             bool                                          use_threads)
 {
   assert(order < 5 and order > 0);
   std::ofstream ofs{ out_file_name + ".scores" };
-  std::ofstream fails{ out_file_name + ".fails" };
 
   ofs << "label";
   switch (order)
@@ -421,12 +458,6 @@ void
   }
 
   ofs << "\n";
-  std::ifstream ifs{ train_file };
-  if (not ifs.is_open())
-  {
-    std::cout << "Error: file " << train_file << " not found";
-    throw EnsembleError{};
-  }
 
   std::vector<int> valid_positions;
   int              counter = 0;
@@ -434,36 +465,22 @@ void
     valid_positions.push_back(std::islower(c) ? counter : counter++);
 
   auto wild_type = true_wild_type;
-  if (ignore_lower)
-    wild_type.erase(std::remove_if(std::begin(wild_type),
-                                   std::end(wild_type),
-                                   [](unsigned char c)
-                                   { return std::islower(c); }),
-                    std::end(wild_type));
+  wild_type.erase(std::remove_if(std::begin(wild_type),
+                                 std::end(wild_type),
+                                 [](unsigned char c)
+                                 { return std::islower(c); }),
+                  std::end(wild_type));
 
-  std::string line;
-  while (std::getline(ifs, line))
+  std::ofstream fails{ out_file_name + ".fails" };
+  auto const   &mutants = generateMutants(
+      train_file, true_wild_type, valid_positions, true_offset, fails);
+
+  for (auto const &[descriptor, mutations, valid_mutation] : mutants)
   {
-    if (line[0] == '#')   // skip comments
-      continue;
-    auto col = line.substr(0, line.find(';'));
-    if (col == "mutant")   // skip header
-      continue;
-    auto sequence       = wild_type;
-    bool valid_mutation = true;
-    if (col != "WT" and col != "wt")
-    {
-      auto const mutations = split(col, ',');
-      for (auto const &mutation : mutations)
-        valid_mutation &= mutateSequence(sequence,
-                                         mutation,
-                                         true_wild_type,
-                                         ignore_lower,
-                                         valid_positions,
-                                         true_offset,
-                                         fails);
-    }
-    ofs << col;
+    ofs << descriptor;
+    auto sequence = wild_type;
+    for (auto [pos, rep] : mutations)
+      sequence[pos] = rep;
     switch (order)
     {
       case 4:

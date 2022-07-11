@@ -25,8 +25,6 @@ std::vector<std::string>
   std::string              s;
   while (std::getline(iss, s, delim))
     v.push_back(s);
-  std::getline(iss, s);
-  v.push_back(s);
   return v;
 }
 

@@ -17,7 +17,8 @@ namespace sic
 {
 class PWM_1
 {
-  const double c =
+private:
+  double c =
       0.000001;   // should be user-provided eventually, currently hard-coded
   std::map<std::tuple<int, char>, double> pwm;
   std::vector<std::map<char, double>>     pwm_t;
@@ -29,9 +30,26 @@ public:
   PWM_1() = default;
 };
 
+class WT_PWM_1
+{
+private:
+  double c =
+      0.000001;   // should be user-provided eventually, currently hard-coded
+  std::map<std::tuple<int, char>, double> wt_pwm;
+  double                                  wt_score;
+  Summary                                 summary;
+
+public:
+  double evaluate(Ensemble const &ensemble, Mutant const &mutant) const;
+
+  WT_PWM_1(Ensemble const &ensemble);
+  WT_PWM_1() = default;
+};
+
 class PWM_2
 {
-  const double c =
+private:
+  double c =
       0.000001;   // should be user-provided eventually, currently hard-coded
   std::map<std::tuple<int, int, char, char>, double>         pwm;
   std::vector<std::map<std::tuple<int, char, char>, double>> pwm_t;
@@ -43,9 +61,26 @@ public:
   PWM_2() = default;
 };
 
+class WT_PWM_2
+{
+private:
+  double c =
+      0.000001;   // should be user-provided eventually, currently hard-coded
+  std::map<std::tuple<int, int, char, char>, double> wt_pwm;
+  double                                             wt_score;
+  Summary                                            summary;
+
+public:
+  double evaluate(Ensemble const &ensemble, Mutant const &mutant) const;
+
+  WT_PWM_2(Ensemble const &ensemble);
+  WT_PWM_2() = default;
+};
+
 class PWM_3
 {
-  const double c =
+private:
+  double c =
       0.000001;   // should be user-provided eventually, currently hard-coded
   std::map<std::tuple<int, int, int, char, char, char>, double>         pwm;
   std::vector<std::map<std::tuple<int, int, char, char, char>, double>> pwm_t;
@@ -57,9 +92,26 @@ public:
   PWM_3() = default;
 };
 
+class WT_PWM_3
+{
+private:
+  double c =
+      0.000001;   // should be user-provided eventually, currently hard-coded
+  std::map<std::tuple<int, int, int, char, char, char>, double> wt_pwm;
+  double                                                        wt_score;
+  Summary                                                       summary;
+
+public:
+  double evaluate(Ensemble const &ensemble, Mutant const &mutant) const;
+
+  WT_PWM_3(Ensemble const &ensemble);
+  WT_PWM_3() = default;
+};
+
 class PWM_4
 {
-  const double c =
+private:
+  double c =
       0.000001;   // should be user-provided eventually, currently hard-coded
   std::map<std::tuple<int, int, int, int, char, char, char, char>, double> pwm;
   Summary summary;
@@ -93,6 +145,14 @@ void testA2M(std::string const                            &out_file_name,
              int                                           order,
              int                                           true_offset,
              bool                                          use_threads);
+
+void testA2MWithoutPWMs(std::string const &out_file_name,
+                        std::string const &train_file,
+                        std::string const &true_wild_type,
+                        Ensemble const    &ensemble,
+                        int                order,
+                        int                true_offset,
+                        bool               use_threads);
 
 bool mutateSequence(std::string            &sequence,
                     std::string const      &col,

@@ -429,6 +429,293 @@ std::vector<Mutant>
   return mutants;
 }
 
+WT_PWM_1::WT_PWM_1(Ensemble const &ensemble)
+{
+  wt_score = 0.0;
+
+  ensemble.verify();
+  auto const L = ensemble.summary.L;
+  auto const D = ensemble.summary.D;
+  auto const c = 0.000001;
+
+  auto const wild_type = ensemble.sequences[0].sequence;
+
+  wt_pwm.clear();
+  for (auto const &sequence : ensemble.sequences)
+    for (int i = 0; i < L; ++i)
+      if (sequence.sequence[i] == wild_type[i])
+        wt_pwm[{ i, wild_type[i] }] +=
+            sequence.weight / ensemble.summary.total_weight;
+
+  for (int i = 0; i < L; ++i)
+    wt_score += std::log(D * (wt_pwm[{ i, wild_type[i] }] + c)) / std::log(D);
+}
+
+double
+    WT_PWM_1::evaluate(Ensemble const &ensemble, Mutant const &mutant) const
+{
+  auto const D = ensemble.summary.D;
+  auto const c = 0.000001;
+
+  auto const wild_type = ensemble.sequences[0].sequence;
+
+  auto score = wt_score;
+
+  for (auto const &[pos, rep] : mutant.mutations)
+  {
+    score -=
+        std::log(D * (wt_pwm.at({ pos, wild_type[pos] }) + c)) / std::log(D);
+
+    auto combo_score = 0.0;
+    for (auto const &sequence : ensemble.sequences)
+      if (sequence.sequence[pos] == rep)
+        combo_score += sequence.weight / ensemble.summary.total_weight;
+
+    score += std::log(D * (combo_score + c)) / std::log(D);
+  }
+
+  return score;
+}
+
+WT_PWM_2::WT_PWM_2(Ensemble const &ensemble)
+{
+  wt_score = 0.0;
+
+  ensemble.verify();
+  auto const L = ensemble.summary.L;
+  auto const D = ensemble.summary.D;
+  auto const c = 0.000001;
+
+  auto const wild_type = ensemble.sequences[0].sequence;
+
+  wt_pwm.clear();
+  for (auto const &sequence : ensemble.sequences)
+    for (int i = 0; i < L; ++i)
+      for (int j = i + 1; j < L; ++j)
+        if (sequence.sequence[i] == wild_type[i] and
+            sequence.sequence[j] == wild_type[j])
+          wt_pwm[{ i, j, wild_type[i], wild_type[j] }] +=
+              sequence.weight / ensemble.summary.total_weight;
+
+  for (int i = 0; i < L; ++i)
+    for (int j = i + 1; j < L; ++j)
+      wt_score +=
+          std::log(D * D * (wt_pwm[{ i, j, wild_type[i], wild_type[j] }] + c)) /
+          std::log(D);
+}
+
+double
+    WT_PWM_2::evaluate(Ensemble const &ensemble, Mutant const &mutant) const
+{
+  auto const D = ensemble.summary.D;
+  auto const L = ensemble.summary.L;
+  auto const c = 0.000001;
+
+  auto const wild_type = ensemble.sequences[0].sequence;
+
+  auto score = wt_score;
+
+  for (auto const &[pos, rep] : mutant.mutations)
+  {
+    for (int i = 0; i < L; ++i)
+      for (int j = i + 1; j < L; ++j)
+        if (i == pos or j == pos)
+          score -=
+              std::log(D * D *
+                       (wt_pwm.at({ i, j, wild_type[i], wild_type[j] }) + c)) /
+              std::log(D);
+
+    std::vector<double> adjusted_scores(L, 0.0);
+
+    for (auto const &sequence : ensemble.sequences)
+      for (int i = 0; i < L; ++i)
+        if (i != pos and sequence.sequence[i] == wild_type[i] and
+            sequence.sequence[pos] == rep)
+          adjusted_scores[i] += sequence.weight / ensemble.summary.total_weight;
+
+    for (int i = 0; i < L; ++i)
+      if (i != pos)
+        score += std::log(D * D * (adjusted_scores[i] + c)) / std::log(D);
+  }
+
+  return score;
+}
+
+WT_PWM_3::WT_PWM_3(Ensemble const &ensemble)
+{
+  wt_score = 0.0;
+
+  ensemble.verify();
+  auto const L = ensemble.summary.L;
+  auto const D = ensemble.summary.D;
+  auto const c = 0.000001;
+
+  auto const wild_type = ensemble.sequences[0].sequence;
+
+  wt_pwm.clear();
+  for (auto const &sequence : ensemble.sequences)
+    for (int i = 0; i < L; ++i)
+      for (int j = i + 1; j < L; ++j)
+        for (int k = j + 1; k < L; ++k)
+          if (sequence.sequence[i] == wild_type[i] and
+              sequence.sequence[j] == wild_type[j] and
+              sequence.sequence[k] == wild_type[k])
+            wt_pwm[{ i, j, k, wild_type[i], wild_type[j], wild_type[k] }] +=
+                sequence.weight / ensemble.summary.total_weight;
+
+  for (int i = 0; i < L; ++i)
+    for (int j = i + 1; j < L; ++j)
+      for (int k = j + 1; k < L; ++k)
+        wt_score +=
+            std::log(
+                D * D * D *
+                (wt_pwm[{ i, j, k, wild_type[i], wild_type[j], wild_type[k] }] +
+                 c)) /
+            std::log(D);
+}
+
+double
+    WT_PWM_3::evaluate(Ensemble const &ensemble, Mutant const &mutant) const
+{
+  auto const D = ensemble.summary.D;
+  auto const L = ensemble.summary.L;
+  auto const c = 0.000001;
+
+  auto const wild_type = ensemble.sequences[0].sequence;
+
+  auto score = wt_score;
+
+  for (auto const &[pos, rep] : mutant.mutations)
+  {
+    for (int i = 0; i < L; ++i)
+      for (int j = i + 1; j < L; ++j)
+        for (int k = j + 1; k < L; ++k)
+          if (i == pos or j == pos or k == pos)
+            score -= std::log(D * D * D *
+                              (wt_pwm.at({ i,
+                                           j,
+                                           k,
+                                           wild_type[i],
+                                           wild_type[j],
+                                           wild_type[k] }) +
+                               c)) /
+                     std::log(D);
+
+    std::vector<std::vector<double>> adjusted_scores(
+        L, std::vector<double>(L, 0.0));
+
+    for (auto const &sequence : ensemble.sequences)
+      for (int i = 0; i < L; ++i)
+        for (int j = i + 1; j < L; ++j)
+          if (i != pos and j != pos and sequence.sequence[i] == wild_type[i] and
+              sequence.sequence[j] == wild_type[j] and
+              sequence.sequence[pos] == rep)
+            adjusted_scores[i][j] +=
+                sequence.weight / ensemble.summary.total_weight;
+
+    for (int i = 0; i < L; ++i)
+      for (int j = i + 1; j < L; ++j)
+        if (i != pos and j != pos)
+          score +=
+              std::log(D * D * D * (adjusted_scores[i][j] + c)) / std::log(D);
+  }
+
+  return score;
+}
+
+void
+    testA2MWithoutPWMs(std::string const &out_file_name,
+                       std::string const &train_file,
+                       std::string const &true_wild_type,
+                       Ensemble const    &ensemble,
+                       int                order,
+                       int                true_offset,
+                       bool)
+{
+  assert(order < 5 and order > 0);
+  std::ofstream ofs{ out_file_name + ".scores" };
+
+  ofs << "label";
+  switch (order)
+  {
+    case 4:
+      ofs << ";score_4";
+      [[fallthrough]];
+    case 3:
+      ofs << ";score_3";
+      [[fallthrough]];
+    case 2:
+      ofs << ";score_2";
+      [[fallthrough]];
+    case 1:
+      ofs << ";score_1";
+  }
+
+  ofs << "\n";
+
+  std::vector<int> valid_positions;
+  int              counter = 0;
+  for (unsigned char c : true_wild_type)
+    valid_positions.push_back(std::islower(c) ? counter : counter++);
+
+  auto wild_type = true_wild_type;
+  wild_type.erase(std::remove_if(std::begin(wild_type),
+                                 std::end(wild_type),
+                                 [](unsigned char c)
+                                 { return std::islower(c); }),
+                  std::end(wild_type));
+
+  std::ofstream fails{ out_file_name + ".fails" };
+  auto const   &mutants = generateMutants(
+      train_file, true_wild_type, valid_positions, true_offset, fails);
+
+  auto const wt_pwm_1 = WT_PWM_1{ ensemble };
+  WT_PWM_2   wt_pwm_2;
+  if (order > 1)
+    wt_pwm_2 = WT_PWM_2{ ensemble };
+  WT_PWM_3 wt_pwm_3;
+  if (order > 2)
+    wt_pwm_3 = WT_PWM_3{ ensemble };
+
+  for (auto const &mutant : mutants)
+  {
+    ofs << mutant.descriptor;
+    switch (order)
+    {
+        /*
+      case 4:
+        if (not mutant.valid_mutation)
+          ofs << ";";
+        else
+           ofs << ";" << std::get<3>(pwms).evaluate(sequence, use_threads);
+        [[fallthrough]];
+          */
+      case 3:
+        if (not mutant.valid_mutation)
+          ofs << ";";
+        else
+          // ofs << ";" << std::get<2>(pwms).evaluate(sequence, use_threads);
+          ofs << ";" << wt_pwm_3.evaluate(ensemble, mutant);
+        [[fallthrough]];
+      case 2:
+        if (not mutant.valid_mutation)
+          ofs << ";";
+        else
+          // ofs << ";" << std::get<1>(pwms).evaluate(sequence, use_threads);
+          ofs << ";" << wt_pwm_2.evaluate(ensemble, mutant);
+        [[fallthrough]];
+      case 1:
+        if (not mutant.valid_mutation)
+          ofs << ";";
+        else
+          //  ofs << ";" << std::get<0>(pwms).evaluate(sequence, use_threads);
+          ofs << ";" << wt_pwm_1.evaluate(ensemble, mutant);
+    }
+    ofs << "\n";
+  }
+  std::cout << "All test sequences are scored.\n" << std::flush;
+}
+
 void
     testA2M(std::string const                            &out_file_name,
             std::string const                            &train_file,

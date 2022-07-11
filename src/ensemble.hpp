@@ -36,12 +36,19 @@ struct Summary
   void print() const;
 };
 
+struct Mutant;   // forward declaration to allow for friendship;
+                 // whole mess needs to be cleaned up eventually
 class Ensemble
 {
   friend class PWM_1;
   friend class PWM_2;
   friend class PWM_3;
   friend class PWM_4;
+
+  friend class WT_PWM_1;
+  friend class WT_PWM_2;
+  friend class WT_PWM_3;
+  friend class WT_PWM_4;
 
 private:
   std::vector<Sequence> sequences;

@@ -67,6 +67,12 @@ try
                  { "Y", "yes", "N", "no" },
                  "N");
 
+  c.add_argument("Use PWMs",
+                 "Use PWMs generated from ensemble (Y/N)",
+                 { "-u", "--use-pwms" },
+                 { "Y", "yes", "N", "no" },
+                 "Y");
+
   auto const args = c.parse_arguments(argc, argv);
 
   try
@@ -112,12 +118,19 @@ try
   auto const thread_arg  = args.at("Multi Threaded");
   auto const use_threads = thread_arg == "Y" or thread_arg == "yes";
 
-  start = std::chrono::system_clock::now();
-  auto const all_pwms =
-      sic::generatePWMs(ensemble, std::stoi(args.at("PWMSize")), use_threads);
-  end = std::chrono::system_clock::now();
-  std::cout << "time to generate ";
-  printTime(end - start);
+  auto const use_pwms_arg = args.at("Use PWMs");
+  auto const use_pwms     = use_pwms_arg == "Y" or use_pwms_arg == "yes";
+
+  std::tuple<sic::PWM_1, sic::PWM_2, sic::PWM_3, sic::PWM_4> all_pwms;
+  if (use_pwms)
+  {
+    start = std::chrono::system_clock::now();
+    all_pwms =
+        sic::generatePWMs(ensemble, std::stoi(args.at("PWMSize")), use_threads);
+    end = std::chrono::system_clock::now();
+    std::cout << "time to generate ";
+    printTime(end - start);
+  }
 
   std::cout << "\n ---> Testing file : " << args.at("Testing File") << "\n";
 
@@ -128,13 +141,23 @@ try
   out_file_name = out_file_name.substr(0, out_file_name.find('.'));
 
   start = std::chrono::system_clock::now();
-  sic::testA2M(out_file_name,
-               args.at("Testing File"),
-               true_target,
-               all_pwms,
-               std::stoi(args.at("PWMSize")),
-               true_offset,
-               use_threads);
+  if (use_pwms)
+    sic::testA2M(out_file_name,
+                 args.at("Testing File"),
+                 true_target,
+                 all_pwms,
+                 std::stoi(args.at("PWMSize")),
+                 true_offset,
+                 use_threads);
+  else
+    sic::testA2MWithoutPWMs(out_file_name,
+                 args.at("Testing File"),
+                 true_target,
+                 ensemble,
+                 std::stoi(args.at("PWMSize")),
+                 true_offset,
+                 use_threads);
+
   end = std::chrono::system_clock::now();
   std::cout << "time to test ";
   printTime(end - start);

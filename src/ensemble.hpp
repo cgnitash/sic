@@ -95,4 +95,5 @@ std::vector<Sequence>
 
 std::vector<std::string> split(std::string const &, char delim);
 
+void adjustWeights(std::vector<Sequence> &seqs);
 }   // namespace sic

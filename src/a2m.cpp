@@ -103,11 +103,17 @@ try
   std::cout << "\n ---> Training file : " << args.at("Training File") << "\n";
 
   auto const true_target = all_seqs[0].sequence;
-  removeLowerCaseResidues(all_seqs, true_target);
+  sic::removeLowerCaseResidues(all_seqs, true_target);
+
+  sic::adjustWeights(all_seqs);
+
+  auto end = std::chrono::system_clock::now();
+  std::cout << "time to adjust weights ";
+  printTime(end - start);
 
   auto ensemble = sic::Ensemble(all_seqs);
 
-  auto end = std::chrono::system_clock::now();
+  end = std::chrono::system_clock::now();
   std::cout << "time to extract and clean ";
   printTime(end - start);
 
@@ -161,6 +167,7 @@ try
   end = std::chrono::system_clock::now();
   std::cout << "time to test ";
   printTime(end - start);
+
   return 0;
 }
 catch (RuntimeError const &)

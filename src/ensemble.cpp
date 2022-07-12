@@ -3,6 +3,7 @@
 #include <cctype>
 #include <cmath>
 #include <fstream>
+#include <functional>
 #include <iomanip>
 #include <iostream>
 #include <iterator>
@@ -246,4 +247,28 @@ std::pair<std::vector<Sequence>, int>
 
   return { result, true_offset };
 }
+
+void
+    adjustWeights(std::vector<Sequence> &seqs)
+{
+
+  for (auto &sequence : seqs)
+  {
+    auto matches = 0;
+    for (auto const &other : seqs)
+    {
+      auto sim = std::inner_product(std::begin(sequence.sequence),
+                                    std::end(sequence.sequence),
+                                    std::begin(other.sequence),
+                                    0,
+                                    std::plus{},
+                                    std::equal_to{});
+      if (sim > .8 * sequence.sequence.size())
+        matches++;
+    }
+    sequence.weight = 1. / matches;
+    //std::cout << matches << " " << sequence.weight << "\n";
+  }
+}
+
 }   // namespace sic

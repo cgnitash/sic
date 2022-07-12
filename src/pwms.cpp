@@ -16,6 +16,7 @@
 #include <utility>
 #include <vector>
 
+#include "ensemble.hpp"
 #include "pwms.hpp"
 
 namespace sic

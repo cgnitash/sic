@@ -249,7 +249,7 @@ std::pair<std::vector<Sequence>, int>
 }
 
 void
-    adjustWeights(std::vector<Sequence> &seqs)
+    adjustWeights(std::vector<Sequence> &seqs, int percentage)
 {
 
   for (auto &sequence : seqs)
@@ -263,11 +263,10 @@ void
                                     0,
                                     std::plus{},
                                     std::equal_to{});
-      if (sim > .8 * sequence.sequence.size())
+      if (sim > percentage / 100.0 * sequence.sequence.size())
         matches++;
     }
     sequence.weight = 1. / matches;
-    //std::cout << matches << " " << sequence.weight << "\n";
   }
 }
 

@@ -73,6 +73,18 @@ try
                  { "Y", "yes", "N", "no" },
                  "Y");
 
+  c.add_argument("Adjust Weights",
+                 "Adjust weights according to similarity (Y/N)",
+                 { "-a", "--adjust-weights" },
+                 { "Y", "yes", "N", "no" },
+                 "Y");
+
+  c.add_argument("Similarity Percentage",
+                 "Percentage similarity threshold for weights",
+                 { "-sim", "--similarity" },
+                 {},
+                 "100");
+
   auto const args = c.parse_arguments(argc, argv);
 
   try
@@ -97,6 +109,8 @@ try
   }
 
   auto start = std::chrono::system_clock::now();
+  auto end   = std::chrono::system_clock::now();
+
   auto [all_seqs, true_offset] =
       sic::extractA2MSequencesFromFile(args.at("Training File"));
 
@@ -105,17 +119,23 @@ try
   auto const true_target = all_seqs[0].sequence;
   sic::removeLowerCaseResidues(all_seqs, true_target);
 
-  sic::adjustWeights(all_seqs);
-
-  auto end = std::chrono::system_clock::now();
-  std::cout << "time to adjust weights ";
-  printTime(end - start);
-
-  auto ensemble = sic::Ensemble(all_seqs);
-
   end = std::chrono::system_clock::now();
   std::cout << "time to extract and clean ";
   printTime(end - start);
+  start = std::chrono::system_clock::now();
+
+  if (auto const adjust = args.at("Adjust Weights");
+      adjust == "Y" or adjust == "yes")
+  {
+    start = std::chrono::system_clock::now();
+    sic::adjustWeights(all_seqs, std::stoi(args.at("Similarity Percentage")));
+
+    end = std::chrono::system_clock::now();
+    std::cout << "time to adjust weights ";
+    printTime(end - start);
+  }
+
+  auto ensemble = sic::Ensemble(all_seqs);
 
   if (auto const summary = args.at("Summarize");
       summary == "Y" or summary == "yes")
@@ -157,12 +177,12 @@ try
                  use_threads);
   else
     sic::testA2MWithoutPWMs(out_file_name,
-                 args.at("Testing File"),
-                 true_target,
-                 ensemble,
-                 std::stoi(args.at("PWMSize")),
-                 true_offset,
-                 use_threads);
+                            args.at("Testing File"),
+                            true_target,
+                            ensemble,
+                            std::stoi(args.at("PWMSize")),
+                            true_offset,
+                            use_threads);
 
   end = std::chrono::system_clock::now();
   std::cout << "time to test ";

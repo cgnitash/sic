@@ -164,7 +164,8 @@ try
   if (auto slash = out_file_name.find_last_of('/'); slash != std::string::npos)
     out_file_name = out_file_name.substr(slash + 1);
 
-  out_file_name = out_file_name.substr(0, out_file_name.find('.'));
+  out_file_name = out_file_name.substr(0, out_file_name.find('.')) + "_" +
+                  args.at("Similarity Percentage");
 
   start = std::chrono::system_clock::now();
   if (use_pwms)

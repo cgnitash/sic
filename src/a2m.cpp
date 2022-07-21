@@ -73,11 +73,12 @@ try
                  { "Y", "yes", "N", "no" },
                  "Y");
 
-  c.add_argument("Adjust Weights",
-                 "Adjust weights according to similarity (Y/N)",
-                 { "-a", "--adjust-weights" },
-                 { "Y", "yes", "N", "no" },
-                 "Y");
+  c.add_argument(
+      "Adjust Weights",
+      "Adjust weights according to similarity (Y/N/U) Y requires percentage",
+      { "-a", "--adjust-weights" },
+      { "U", "uniform", "Y", "yes", "N", "no" },
+      "N");
 
   c.add_argument("Similarity Percentage",
                  "Percentage similarity threshold for weights",
@@ -124,14 +125,27 @@ try
   printTime(end - start);
   start = std::chrono::system_clock::now();
 
-  if (auto const adjust = args.at("Adjust Weights");
-      adjust == "Y" or adjust == "yes")
+  auto const adjust_arg = args.at("Adjust Weights");
+
+  if (adjust_arg == "U" or adjust_arg == "uniform")
   {
     start = std::chrono::system_clock::now();
-    sic::adjustWeights(all_seqs, std::stoi(args.at("Similarity Percentage")));
+    std::cout << "Similarity percentage will be ignored if provided...\n";
+    sic::adjustWeightsUniformly(all_seqs);
 
     end = std::chrono::system_clock::now();
-    std::cout << "time to adjust weights ";
+    std::cout << "time to adjust weights (uniform) ";
+    printTime(end - start);
+  }
+
+  if (adjust_arg == "Y" or adjust_arg == "yes")
+  {
+    auto const sim_perc = std::stoi(args.at("Similarity Percentage"));
+    start               = std::chrono::system_clock::now();
+    sic::adjustWeights(all_seqs, sim_perc);
+
+    end = std::chrono::system_clock::now();
+    std::cout << "time to adjust weights (by similarity) ";
     printTime(end - start);
   }
 
@@ -164,8 +178,9 @@ try
   if (auto slash = out_file_name.find_last_of('/'); slash != std::string::npos)
     out_file_name = out_file_name.substr(slash + 1);
 
-  out_file_name = out_file_name.substr(0, out_file_name.find('.')) + "_" +
-                  args.at("Similarity Percentage");
+  out_file_name = out_file_name.substr(0, out_file_name.find('.'));
+  if (adjust_arg == "Y" or adjust_arg == "yes")
+    out_file_name += "_" + args.at("Similarity Percentage");
 
   start = std::chrono::system_clock::now();
   if (use_pwms)

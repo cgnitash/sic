@@ -1,6 +1,6 @@
 
 CXX = g++
-CXXFLAGS = -std=c++17 -O3 -Wall -Wextra -Werror 
+CXXFLAGS = -std=c++17 -O3 -pthread -Wall -Wextra -Werror 
 
 sicrun: a2m.o ensemble.o pwms.o clap.o
 	 $(CXX) $(CXXFLAGS) a2m.o ensemble.o pwms.o clap.o -o sicrun

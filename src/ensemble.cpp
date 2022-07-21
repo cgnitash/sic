@@ -270,4 +270,25 @@ void
   }
 }
 
+void
+    adjustWeightsUniformly(std::vector<Sequence> &seqs)
+{
+
+  for (auto &sequence : seqs)
+  {
+    auto matches = 0;
+    for (auto const &other : seqs)
+    {
+      auto sim = std::inner_product(std::begin(sequence.sequence),
+                                    std::end(sequence.sequence),
+                                    std::begin(other.sequence),
+                                    0,
+                                    std::plus{},
+                                    std::equal_to{});
+      matches += sim / static_cast<double>(other.sequence.size());
+    }
+    sequence.weight = matches / static_cast<double>(seqs.size());
+  }
+}
+
 }   // namespace sic

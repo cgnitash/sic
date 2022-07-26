@@ -18,14 +18,13 @@ namespace sic
 class PWM_1
 {
 private:
-  double c =
-      0.000001;   // should be user-provided eventually, currently hard-coded
   std::map<std::tuple<int, char>, double> pwm;
   std::vector<std::map<char, double>>     pwm_t;
   Summary                                 summary;
 
 public:
-  double evaluate(std::string const &sequence, bool use_threads) const;
+  double
+      evaluate(std::string const &sequence, bool use_threads, double c) const;
   PWM_1(Ensemble const &ensemble, bool use_threads);
   PWM_1() = default;
 };
@@ -33,30 +32,28 @@ public:
 class WT_PWM_1
 {
 private:
-  double c =
-      0.000001;   // should be user-provided eventually, currently hard-coded
   std::map<std::tuple<int, char>, double> wt_pwm;
   double                                  wt_score;
   Summary                                 summary;
 
 public:
-  double evaluate(Ensemble const &ensemble, Mutant const &mutant) const;
+  double
+      evaluate(Ensemble const &ensemble, Mutant const &mutant, double c) const;
 
-  WT_PWM_1(Ensemble const &ensemble);
+  WT_PWM_1(Ensemble const &ensemble, double c);
   WT_PWM_1() = default;
 };
 
 class PWM_2
 {
 private:
-  double c =
-      0.000001;   // should be user-provided eventually, currently hard-coded
   std::map<std::tuple<int, int, char, char>, double>         pwm;
   std::vector<std::map<std::tuple<int, char, char>, double>> pwm_t;
   Summary                                                    summary;
 
 public:
-  double evaluate(std::string const &sequence, bool use_threads) const;
+  double
+      evaluate(std::string const &sequence, bool use_threads, double c) const;
   PWM_2(Ensemble const &ensemble, bool use_threads);
   PWM_2() = default;
 };
@@ -64,30 +61,28 @@ public:
 class WT_PWM_2
 {
 private:
-  double c =
-      0.000001;   // should be user-provided eventually, currently hard-coded
   std::map<std::tuple<int, int, char, char>, double> wt_pwm;
   double                                             wt_score;
   Summary                                            summary;
 
 public:
-  double evaluate(Ensemble const &ensemble, Mutant const &mutant) const;
+  double
+      evaluate(Ensemble const &ensemble, Mutant const &mutant, double c) const;
 
-  WT_PWM_2(Ensemble const &ensemble);
+  WT_PWM_2(Ensemble const &ensemble, double c);
   WT_PWM_2() = default;
 };
 
 class PWM_3
 {
 private:
-  double c =
-      0.000001;   // should be user-provided eventually, currently hard-coded
   std::map<std::tuple<int, int, int, char, char, char>, double>         pwm;
   std::vector<std::map<std::tuple<int, int, char, char, char>, double>> pwm_t;
   Summary                                                               summary;
 
 public:
-  double evaluate(std::string const &sequence, bool use_threads) const;
+  double
+      evaluate(std::string const &sequence, bool use_threads, double c) const;
   PWM_3(Ensemble const &ensemble, bool use_threads);
   PWM_3() = default;
 };
@@ -95,29 +90,27 @@ public:
 class WT_PWM_3
 {
 private:
-  double c =
-      0.000001;   // should be user-provided eventually, currently hard-coded
   std::map<std::tuple<int, int, int, char, char, char>, double> wt_pwm;
   double                                                        wt_score;
   Summary                                                       summary;
 
 public:
-  double evaluate(Ensemble const &ensemble, Mutant const &mutant) const;
+  double
+      evaluate(Ensemble const &ensemble, Mutant const &mutant, double c) const;
 
-  WT_PWM_3(Ensemble const &ensemble);
+  WT_PWM_3(Ensemble const &ensemble, double c);
   WT_PWM_3() = default;
 };
 
 class PWM_4
 {
 private:
-  double c =
-      0.000001;   // should be user-provided eventually, currently hard-coded
   std::map<std::tuple<int, int, int, int, char, char, char, char>, double> pwm;
   Summary summary;
 
 public:
-  double evaluate(std::string const &sequence, bool use_threads) const;
+  double
+      evaluate(std::string const &sequence, bool use_threads, double c) const;
   PWM_4(Ensemble const &ensemble, bool use_threads);
   PWM_4() = default;
 };
@@ -136,7 +129,8 @@ void test(std::string const                            &out_file_name,
           std::string const                            &train_column,
           std::vector<Sequence> const                  &sequences,
           std::tuple<PWM_1, PWM_2, PWM_3, PWM_4> const &pwms,
-          int                                           order);
+          int                                           order,
+          double                                        c);
 
 void testA2M(std::string const                            &out_file_name,
              std::string const                            &train_file,
@@ -144,7 +138,8 @@ void testA2M(std::string const                            &out_file_name,
              std::tuple<PWM_1, PWM_2, PWM_3, PWM_4> const &pwms,
              int                                           order,
              int                                           true_offset,
-             bool                                          use_threads);
+             bool                                          use_threads,
+             double                                        c);
 
 void testA2MWithoutPWMs(std::string const &out_file_name,
                         std::string const &train_file,
@@ -152,7 +147,8 @@ void testA2MWithoutPWMs(std::string const &out_file_name,
                         Ensemble const    &ensemble,
                         int                order,
                         int                true_offset,
-                        bool               use_threads);
+                        bool               use_threads,
+                        double             c);
 
 bool mutateSequence(std::string            &sequence,
                     std::string const      &col,

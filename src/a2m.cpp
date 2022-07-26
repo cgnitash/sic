@@ -1,5 +1,6 @@
 
 #include <chrono>
+#include <cmath>
 #include <fstream>
 #include <stdexcept>
 
@@ -85,6 +86,12 @@ try
                  { "-sim", "--similarity" },
                  {},
                  "100");
+
+  c.add_argument("Pseudo Count",
+                 "Pseudo-count value N -> 1/10^N",
+                 { "-p", "--pseudo-count" },
+                 {},
+                 "6");
 
   auto const args = c.parse_arguments(argc, argv);
 
@@ -174,13 +181,18 @@ try
 
   std::cout << "\n ---> Testing file : " << args.at("Testing File") << "\n";
 
+  auto pseudo_count_arg = args.at("Pseudo Count");
+
   auto out_file_name = args.at("Testing File");
   if (auto slash = out_file_name.find_last_of('/'); slash != std::string::npos)
     out_file_name = out_file_name.substr(slash + 1);
 
   out_file_name = out_file_name.substr(0, out_file_name.find('.'));
   if (adjust_arg == "Y" or adjust_arg == "yes")
-    out_file_name += "_" + args.at("Similarity Percentage");
+    out_file_name +=
+        "_" + args.at("Similarity Percentage") + "_" + pseudo_count_arg;
+
+  auto const pseudo_count = 1.0 / std::pow(10.0, std::stod(pseudo_count_arg));
 
   start = std::chrono::system_clock::now();
   if (use_pwms)
@@ -190,7 +202,8 @@ try
                  all_pwms,
                  std::stoi(args.at("PWMSize")),
                  true_offset,
-                 use_threads);
+                 use_threads,
+                 pseudo_count);
   else
     sic::testA2MWithoutPWMs(out_file_name,
                             args.at("Testing File"),
@@ -198,7 +211,8 @@ try
                             ensemble,
                             std::stoi(args.at("PWMSize")),
                             true_offset,
-                            use_threads);
+                            use_threads,
+                            pseudo_count);
 
   end = std::chrono::system_clock::now();
   std::cout << "time to test ";

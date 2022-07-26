@@ -199,7 +199,9 @@ PWM_4::PWM_4(Ensemble const &ensemble, bool use_threads)
 }
 
 double
-    PWM_1::evaluate(std::string const &sequence, bool use_threads) const
+    PWM_1::evaluate(std::string const &sequence,
+                    bool               use_threads,
+                    double             c) const
 {
   auto const L     = summary.L;
   auto const D     = summary.D;
@@ -225,7 +227,9 @@ double
 }
 
 double
-    PWM_2::evaluate(std::string const &sequence, bool use_threads) const
+    PWM_2::evaluate(std::string const &sequence,
+                    bool               use_threads,
+                    double             c) const
 {
   auto const L     = summary.L;
   auto const D     = summary.D;
@@ -253,7 +257,9 @@ double
 }
 
 double
-    PWM_3::evaluate(std::string const &sequence, bool use_threads) const
+    PWM_3::evaluate(std::string const &sequence,
+                    bool               use_threads,
+                    double             c) const
 {
   auto const L     = summary.L;
   auto const D     = summary.D;
@@ -285,7 +291,9 @@ double
 }
 
 double
-    PWM_4::evaluate(std::string const &sequence, bool use_threads) const
+    PWM_4::evaluate(std::string const &sequence,
+                    bool               use_threads,
+                    double             c) const
 {
   if (use_threads)
   {
@@ -430,14 +438,13 @@ std::vector<Mutant>
   return mutants;
 }
 
-WT_PWM_1::WT_PWM_1(Ensemble const &ensemble)
+WT_PWM_1::WT_PWM_1(Ensemble const &ensemble, double c)
 {
   wt_score = 0.0;
 
   ensemble.verify();
   auto const L = ensemble.summary.L;
   auto const D = ensemble.summary.D;
-  auto const c = 0.000001;
 
   auto const wild_type = ensemble.sequences[0].sequence;
 
@@ -453,10 +460,11 @@ WT_PWM_1::WT_PWM_1(Ensemble const &ensemble)
 }
 
 double
-    WT_PWM_1::evaluate(Ensemble const &ensemble, Mutant const &mutant) const
+    WT_PWM_1::evaluate(Ensemble const &ensemble,
+                       Mutant const   &mutant,
+                       double          c) const
 {
   auto const D = ensemble.summary.D;
-  auto const c = 0.000001;
 
   auto const wild_type = ensemble.sequences[0].sequence;
 
@@ -478,14 +486,13 @@ double
   return score;
 }
 
-WT_PWM_2::WT_PWM_2(Ensemble const &ensemble)
+WT_PWM_2::WT_PWM_2(Ensemble const &ensemble, double c)
 {
   wt_score = 0.0;
 
   ensemble.verify();
   auto const L = ensemble.summary.L;
   auto const D = ensemble.summary.D;
-  auto const c = 0.000001;
 
   auto const wild_type = ensemble.sequences[0].sequence;
 
@@ -506,11 +513,12 @@ WT_PWM_2::WT_PWM_2(Ensemble const &ensemble)
 }
 
 double
-    WT_PWM_2::evaluate(Ensemble const &ensemble, Mutant const &mutant) const
+    WT_PWM_2::evaluate(Ensemble const &ensemble,
+                       Mutant const   &mutant,
+                       double          c) const
 {
   auto const D = ensemble.summary.D;
   auto const L = ensemble.summary.L;
-  auto const c = 0.000001;
 
   auto const wild_type = ensemble.sequences[0].sequence;
 
@@ -542,14 +550,13 @@ double
   return score;
 }
 
-WT_PWM_3::WT_PWM_3(Ensemble const &ensemble)
+WT_PWM_3::WT_PWM_3(Ensemble const &ensemble, double c)
 {
   wt_score = 0.0;
 
   ensemble.verify();
   auto const L = ensemble.summary.L;
   auto const D = ensemble.summary.D;
-  auto const c = 0.000001;
 
   auto const wild_type = ensemble.sequences[0].sequence;
 
@@ -576,11 +583,12 @@ WT_PWM_3::WT_PWM_3(Ensemble const &ensemble)
 }
 
 double
-    WT_PWM_3::evaluate(Ensemble const &ensemble, Mutant const &mutant) const
+    WT_PWM_3::evaluate(Ensemble const &ensemble,
+                       Mutant const   &mutant,
+                       double          c) const
 {
   auto const D = ensemble.summary.D;
   auto const L = ensemble.summary.L;
-  auto const c = 0.000001;
 
   auto const wild_type = ensemble.sequences[0].sequence;
 
@@ -631,7 +639,8 @@ void
                        Ensemble const    &ensemble,
                        int                order,
                        int                true_offset,
-                       bool)
+                       bool,
+                       double c)
 {
   assert(order < 5 and order > 0);
   std::ofstream ofs{ out_file_name + ".scores" };
@@ -670,13 +679,13 @@ void
   auto const   &mutants = generateMutants(
       train_file, true_wild_type, valid_positions, true_offset, fails);
 
-  auto const wt_pwm_1 = WT_PWM_1{ ensemble };
+  auto const wt_pwm_1 = WT_PWM_1{ ensemble, c };
   WT_PWM_2   wt_pwm_2;
   if (order > 1)
-    wt_pwm_2 = WT_PWM_2{ ensemble };
+    wt_pwm_2 = WT_PWM_2{ ensemble, c };
   WT_PWM_3 wt_pwm_3;
   if (order > 2)
-    wt_pwm_3 = WT_PWM_3{ ensemble };
+    wt_pwm_3 = WT_PWM_3{ ensemble, c };
 
   for (auto const &mutant : mutants)
   {
@@ -696,21 +705,21 @@ void
           ofs << ";";
         else
           // ofs << ";" << std::get<2>(pwms).evaluate(sequence, use_threads);
-          ofs << ";" << wt_pwm_3.evaluate(ensemble, mutant);
+          ofs << ";" << wt_pwm_3.evaluate(ensemble, mutant, c);
         [[fallthrough]];
       case 2:
         if (not mutant.valid_mutation)
           ofs << ";";
         else
           // ofs << ";" << std::get<1>(pwms).evaluate(sequence, use_threads);
-          ofs << ";" << wt_pwm_2.evaluate(ensemble, mutant);
+          ofs << ";" << wt_pwm_2.evaluate(ensemble, mutant, c);
         [[fallthrough]];
       case 1:
         if (not mutant.valid_mutation)
           ofs << ";";
         else
           //  ofs << ";" << std::get<0>(pwms).evaluate(sequence, use_threads);
-          ofs << ";" << wt_pwm_1.evaluate(ensemble, mutant);
+          ofs << ";" << wt_pwm_1.evaluate(ensemble, mutant, c);
     }
     ofs << "\n";
   }
@@ -724,7 +733,8 @@ void
             std::tuple<PWM_1, PWM_2, PWM_3, PWM_4> const &pwms,
             int                                           order,
             int                                           true_offset,
-            bool                                          use_threads)
+            bool                                          use_threads,
+            double                                        c)
 {
   assert(order < 5 and order > 0);
   std::ofstream ofs{ out_file_name + ".scores" };
@@ -775,25 +785,25 @@ void
         if (not valid_mutation)
           ofs << ";";
         else
-          ofs << ";" << std::get<3>(pwms).evaluate(sequence, use_threads);
+          ofs << ";" << std::get<3>(pwms).evaluate(sequence, use_threads, c);
         [[fallthrough]];
       case 3:
         if (not valid_mutation)
           ofs << ";";
         else
-          ofs << ";" << std::get<2>(pwms).evaluate(sequence, use_threads);
+          ofs << ";" << std::get<2>(pwms).evaluate(sequence, use_threads, c);
         [[fallthrough]];
       case 2:
         if (not valid_mutation)
           ofs << ";";
         else
-          ofs << ";" << std::get<1>(pwms).evaluate(sequence, use_threads);
+          ofs << ";" << std::get<1>(pwms).evaluate(sequence, use_threads, c);
         [[fallthrough]];
       case 1:
         if (not valid_mutation)
           ofs << ";";
         else
-          ofs << ";" << std::get<0>(pwms).evaluate(sequence, use_threads);
+          ofs << ";" << std::get<0>(pwms).evaluate(sequence, use_threads, c);
     }
     ofs << "\n";
   }
@@ -805,7 +815,8 @@ void
          std::string const                            &train_column,
          std::vector<Sequence> const                  &sequences,
          std::tuple<PWM_1, PWM_2, PWM_3, PWM_4> const &pwms,
-         int                                           order)
+         int                                           order,
+         double                                        c)
 {
   assert(order < 5 and order > 0);
   std::ofstream ofs{ out_file_name + ".scores" };
@@ -833,16 +844,16 @@ void
     switch (order)
     {
       case 4:
-        ofs << "," << std::get<3>(pwms).evaluate(sequence.sequence, false);
+        ofs << "," << std::get<3>(pwms).evaluate(sequence.sequence, false, c);
         [[fallthrough]];
       case 3:
-        ofs << "," << std::get<2>(pwms).evaluate(sequence.sequence, false);
+        ofs << "," << std::get<2>(pwms).evaluate(sequence.sequence, false, c);
         [[fallthrough]];
       case 2:
-        ofs << "," << std::get<1>(pwms).evaluate(sequence.sequence, false);
+        ofs << "," << std::get<1>(pwms).evaluate(sequence.sequence, false, c);
         [[fallthrough]];
       case 1:
-        ofs << "," << std::get<0>(pwms).evaluate(sequence.sequence, false);
+        ofs << "," << std::get<0>(pwms).evaluate(sequence.sequence, false, c);
     }
     ofs << "\n";
   }

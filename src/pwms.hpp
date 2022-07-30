@@ -24,7 +24,7 @@ private:
 
 public:
   double
-      evaluate(std::string const &sequence, bool use_threads, double c) const;
+      evaluate(std::string const &sequence, bool use_threads, double c, bool use_bias) const;
   PWM_1(Ensemble const &ensemble, bool use_threads);
   PWM_1() = default;
 };
@@ -38,9 +38,9 @@ private:
 
 public:
   double
-      evaluate(Ensemble const &ensemble, Mutant const &mutant, double c) const;
+      evaluate(Ensemble const &ensemble, Mutant const &mutant, double c, bool use_bias) const;
 
-  WT_PWM_1(Ensemble const &ensemble, double c);
+  WT_PWM_1(Ensemble const &ensemble, double c, bool use_bias);
   WT_PWM_1() = default;
 };
 
@@ -53,7 +53,7 @@ private:
 
 public:
   double
-      evaluate(std::string const &sequence, bool use_threads, double c) const;
+      evaluate(std::string const &sequence, bool use_threads, double c, bool use_bias) const;
   PWM_2(Ensemble const &ensemble, bool use_threads);
   PWM_2() = default;
 };
@@ -67,9 +67,9 @@ private:
 
 public:
   double
-      evaluate(Ensemble const &ensemble, Mutant const &mutant, double c) const;
+      evaluate(Ensemble const &ensemble, Mutant const &mutant, double c, bool use_bias) const;
 
-  WT_PWM_2(Ensemble const &ensemble, double c);
+  WT_PWM_2(Ensemble const &ensemble, double c, bool use_bias);
   WT_PWM_2() = default;
 };
 
@@ -82,7 +82,7 @@ private:
 
 public:
   double
-      evaluate(std::string const &sequence, bool use_threads, double c) const;
+      evaluate(std::string const &sequence, bool use_threads, double c, bool use_bias) const;
   PWM_3(Ensemble const &ensemble, bool use_threads);
   PWM_3() = default;
 };
@@ -96,9 +96,9 @@ private:
 
 public:
   double
-      evaluate(Ensemble const &ensemble, Mutant const &mutant, double c) const;
+      evaluate(Ensemble const &ensemble, Mutant const &mutant, double c, bool use_bias) const;
 
-  WT_PWM_3(Ensemble const &ensemble, double c);
+  WT_PWM_3(Ensemble const &ensemble, double c, bool use_bias);
   WT_PWM_3() = default;
 };
 
@@ -110,7 +110,7 @@ private:
 
 public:
   double
-      evaluate(std::string const &sequence, bool use_threads, double c) const;
+      evaluate(std::string const &sequence, bool use_threads, double c, bool use_bias) const;
   PWM_4(Ensemble const &ensemble, bool use_threads);
   PWM_4() = default;
 };
@@ -139,7 +139,7 @@ void testA2M(std::string const                            &out_file_name,
              int                                           order,
              int                                           true_offset,
              bool                                          use_threads,
-             double                                        c);
+             double                                        c, bool use_bias);
 
 void testA2MWithoutPWMs(std::string const &out_file_name,
                         std::string const &train_file,
@@ -148,7 +148,7 @@ void testA2MWithoutPWMs(std::string const &out_file_name,
                         int                order,
                         int                true_offset,
                         bool               use_threads,
-                        double             c);
+                        double             c, bool use_bias);
 
 bool mutateSequence(std::string            &sequence,
                     std::string const      &col,

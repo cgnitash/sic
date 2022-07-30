@@ -93,6 +93,12 @@ try
                  {},
                  "6");
 
+  c.add_argument("Use Bias",
+                 "Use biased distribution of symbols (Y/N)",
+                 { "-b", "--use-bias" },
+                 { "Y", "yes", "N", "no" },
+                 "N");
+
   auto const args = c.parse_arguments(argc, argv);
 
   try
@@ -168,12 +174,15 @@ try
   auto const use_pwms_arg = args.at("Use PWMs");
   auto const use_pwms     = use_pwms_arg == "Y" or use_pwms_arg == "yes";
 
+  auto const use_bias_arg = args.at("Use Bias");
+  auto const use_bias     = use_bias_arg == "Y" or use_bias_arg == "yes";
+
   std::tuple<sic::PWM_1, sic::PWM_2, sic::PWM_3, sic::PWM_4> all_pwms;
   if (use_pwms)
   {
-    start = std::chrono::system_clock::now();
-    all_pwms =
-        sic::generatePWMs(ensemble, std::stoi(args.at("PWMSize")), use_threads);
+    start    = std::chrono::system_clock::now();
+    all_pwms = sic::generatePWMs(
+        ensemble, std::stoi(args.at("PWMSize")), use_threads);
     end = std::chrono::system_clock::now();
     std::cout << "time to generate ";
     printTime(end - start);
@@ -203,7 +212,8 @@ try
                  std::stoi(args.at("PWMSize")),
                  true_offset,
                  use_threads,
-                 pseudo_count);
+                 pseudo_count,
+                 use_bias);
   else
     sic::testA2MWithoutPWMs(out_file_name,
                             args.at("Testing File"),
@@ -212,7 +222,8 @@ try
                             std::stoi(args.at("PWMSize")),
                             true_offset,
                             use_threads,
-                            pseudo_count);
+                            pseudo_count,
+                            use_bias);
 
   end = std::chrono::system_clock::now();
   std::cout << "time to test ";

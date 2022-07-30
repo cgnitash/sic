@@ -162,6 +162,7 @@ Ensemble::Ensemble(std::vector<Sequence> const &seqs)
   for (auto const &symbol : summary.symbol_counts)
     summary.symbols.push_back(symbol.first);
 
+  summary.N = static_cast<int>(sequences.size());
   summary.D = static_cast<int>(summary.symbol_counts.size());
   summary.L = static_cast<int>(sequences[0].sequence.size());
 }

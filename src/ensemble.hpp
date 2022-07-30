@@ -26,6 +26,7 @@ struct Sequence
 
 struct Summary
 {
+  int                                 N;
   int                                 D;
   int                                 L;
   double                              total_weight = 0;

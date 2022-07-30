@@ -5,6 +5,7 @@
 #include <chrono>
 #include <cmath>
 #include <fstream>
+#include <iomanip>
 #include <iostream>
 #include <map>
 #include <regex>
@@ -201,7 +202,8 @@ PWM_4::PWM_4(Ensemble const &ensemble, bool use_threads)
 double
     PWM_1::evaluate(std::string const &sequence,
                     bool               use_threads,
-                    double             c) const
+                    double             c,
+                    bool               use_bias) const
 {
   auto const L     = summary.L;
   auto const D     = summary.D;
@@ -219,8 +221,14 @@ double
     {
       auto val = pwm.find({ i, sequence[i] });
 
-      score += std::log(D * ((val != pwm.end() ? val->second : 0.) + c)) /
-               std::log(D);
+      auto const biased_D =
+          use_bias ? static_cast<double>(summary.N * summary.L) /
+                         summary.symbol_counts.at(sequence[i]).first
+                   : D;
+
+      score +=
+          std::log(biased_D * ((val != pwm.end() ? val->second : 0.) + c)) /
+          std::log(D);
     }
   }
   return score;
@@ -229,7 +237,8 @@ double
 double
     PWM_2::evaluate(std::string const &sequence,
                     bool               use_threads,
-                    double             c) const
+                    double             c,
+                    bool               use_bias) const
 {
   auto const L     = summary.L;
   auto const D     = summary.D;
@@ -249,7 +258,18 @@ double
       {
         auto val = pwm.find({ i, j, sequence[i], sequence[j] });
 
-        score += std::log(D * D * ((val != pwm.end() ? val->second : 0.) + c)) /
+        auto const biased_D_i =
+            use_bias ? static_cast<double>(summary.N * summary.L) /
+                           summary.symbol_counts.at(sequence[i]).first
+                     : D;
+
+        auto const biased_D_j =
+            use_bias ? static_cast<double>(summary.N * summary.L) /
+                           summary.symbol_counts.at(sequence[j]).first
+                     : D;
+
+        score += std::log(biased_D_i * biased_D_j *
+                          ((val != pwm.end() ? val->second : 0.) + c)) /
                  std::log(D);
       }
     }
@@ -259,7 +279,8 @@ double
 double
     PWM_3::evaluate(std::string const &sequence,
                     bool               use_threads,
-                    double             c) const
+                    double             c,
+                    bool) const
 {
   auto const L     = summary.L;
   auto const D     = summary.D;
@@ -293,7 +314,8 @@ double
 double
     PWM_4::evaluate(std::string const &sequence,
                     bool               use_threads,
-                    double             c) const
+                    double             c,
+                    bool) const
 {
   if (use_threads)
   {
@@ -438,7 +460,8 @@ std::vector<Mutant>
   return mutants;
 }
 
-WT_PWM_1::WT_PWM_1(Ensemble const &ensemble, double c)
+WT_PWM_1::WT_PWM_1(Ensemble const &ensemble, double c, bool use_bias)
+    : summary(ensemble.summary)
 {
   wt_score = 0.0;
 
@@ -456,13 +479,27 @@ WT_PWM_1::WT_PWM_1(Ensemble const &ensemble, double c)
             sequence.weight / ensemble.summary.total_weight;
 
   for (int i = 0; i < L; ++i)
-    wt_score += std::log(D * (wt_pwm[{ i, wild_type[i] }] + c)) / std::log(D);
+  {
+    if (summary.symbol_counts.find(wild_type[i]) == summary.symbol_counts.end())
+    {
+      std::cout << "err: " << wild_type[i] << "not found\n";
+      ensemble.print_summary();
+    }
+    auto const biased_D = use_bias
+                              ? static_cast<double>(summary.N * summary.L) /
+                                    summary.symbol_counts.at(wild_type[i]).first
+                              : D;
+
+    wt_score +=
+        std::log(biased_D * (wt_pwm[{ i, wild_type[i] }] + c)) / std::log(D);
+  }
 }
 
 double
     WT_PWM_1::evaluate(Ensemble const &ensemble,
                        Mutant const   &mutant,
-                       double          c) const
+                       double          c,
+                       bool            use_bias) const
 {
   auto const D = ensemble.summary.D;
 
@@ -472,21 +509,33 @@ double
 
   for (auto const &[pos, rep] : mutant.mutations)
   {
-    score -=
-        std::log(D * (wt_pwm.at({ pos, wild_type[pos] }) + c)) / std::log(D);
+    auto const wild_type_biased_D =
+        use_bias ? static_cast<double>(summary.N * summary.L) /
+                       summary.symbol_counts.at(wild_type[pos]).first
+                 : D;
+
+    score -= std::log(wild_type_biased_D *
+                      (wt_pwm.at({ pos, wild_type[pos] }) + c)) /
+             std::log(D);
 
     auto combo_score = 0.0;
     for (auto const &sequence : ensemble.sequences)
       if (sequence.sequence[pos] == rep)
         combo_score += sequence.weight / ensemble.summary.total_weight;
 
-    score += std::log(D * (combo_score + c)) / std::log(D);
+    auto const biased_D = use_bias
+                              ? static_cast<double>(summary.N * summary.L) /
+                                    summary.symbol_counts.at(rep).first
+                              : D;
+
+    score += std::log(biased_D * (combo_score + c)) / std::log(D);
   }
 
   return score;
 }
 
-WT_PWM_2::WT_PWM_2(Ensemble const &ensemble, double c)
+WT_PWM_2::WT_PWM_2(Ensemble const &ensemble, double c, bool use_bias)
+    : summary(ensemble.summary)
 {
   wt_score = 0.0;
 
@@ -507,15 +556,28 @@ WT_PWM_2::WT_PWM_2(Ensemble const &ensemble, double c)
 
   for (int i = 0; i < L; ++i)
     for (int j = i + 1; j < L; ++j)
-      wt_score +=
-          std::log(D * D * (wt_pwm[{ i, j, wild_type[i], wild_type[j] }] + c)) /
-          std::log(D);
+    {
+      auto const biased_D_i =
+          use_bias ? static_cast<double>(summary.N * summary.L) /
+                         summary.symbol_counts.at(wild_type[i]).first
+                   : D;
+
+      auto const biased_D_j =
+          use_bias ? static_cast<double>(summary.N * summary.L) /
+                         summary.symbol_counts.at(wild_type[j]).first
+                   : D;
+
+      wt_score += std::log(biased_D_i * biased_D_j *
+                           (wt_pwm[{ i, j, wild_type[i], wild_type[j] }] + c)) /
+                  std::log(D);
+    }
 }
 
 double
     WT_PWM_2::evaluate(Ensemble const &ensemble,
                        Mutant const   &mutant,
-                       double          c) const
+                       double          c,
+                       bool            use_bias) const
 {
   auto const D = ensemble.summary.D;
   auto const L = ensemble.summary.L;
@@ -529,10 +591,21 @@ double
     for (int i = 0; i < L; ++i)
       for (int j = i + 1; j < L; ++j)
         if (i == pos or j == pos)
+        {
+          auto const wild_type_biased_D_i =
+              use_bias ? static_cast<double>(summary.N * summary.L) /
+                             summary.symbol_counts.at(wild_type[i]).first
+                       : D;
+
+          auto const wild_type_biased_D_j =
+              use_bias ? static_cast<double>(summary.N * summary.L) /
+                             summary.symbol_counts.at(wild_type[j]).first
+                       : D;
           score -=
-              std::log(D * D *
+              std::log(wild_type_biased_D_i * wild_type_biased_D_j *
                        (wt_pwm.at({ i, j, wild_type[i], wild_type[j] }) + c)) /
               std::log(D);
+        }
 
     std::vector<double> adjusted_scores(L, 0.0);
 
@@ -544,13 +617,27 @@ double
 
     for (int i = 0; i < L; ++i)
       if (i != pos)
-        score += std::log(D * D * (adjusted_scores[i] + c)) / std::log(D);
+      {
+        auto const biased_D_i =
+            use_bias ? static_cast<double>(summary.N * summary.L) /
+                           summary.symbol_counts.at(wild_type[i]).first
+                     : D;
+
+        auto const biased_D_rep =
+            use_bias ? static_cast<double>(summary.N * summary.L) /
+                           summary.symbol_counts.at(rep).first
+                     : D;
+        score +=
+            std::log(biased_D_i * biased_D_rep * (adjusted_scores[i] + c)) /
+            std::log(D);
+      }
   }
 
   return score;
 }
 
-WT_PWM_3::WT_PWM_3(Ensemble const &ensemble, double c)
+WT_PWM_3::WT_PWM_3(Ensemble const &ensemble, double c, bool)
+    : summary(ensemble.summary)
 {
   wt_score = 0.0;
 
@@ -585,7 +672,8 @@ WT_PWM_3::WT_PWM_3(Ensemble const &ensemble, double c)
 double
     WT_PWM_3::evaluate(Ensemble const &ensemble,
                        Mutant const   &mutant,
-                       double          c) const
+                       double          c,
+                       bool) const
 {
   auto const D = ensemble.summary.D;
   auto const L = ensemble.summary.L;
@@ -640,7 +728,8 @@ void
                        int                order,
                        int                true_offset,
                        bool,
-                       double c)
+                       double c,
+                       bool   use_bias)
 {
   assert(order < 5 and order > 0);
   std::ofstream ofs{ out_file_name + ".scores" };
@@ -679,13 +768,13 @@ void
   auto const   &mutants = generateMutants(
       train_file, true_wild_type, valid_positions, true_offset, fails);
 
-  auto const wt_pwm_1 = WT_PWM_1{ ensemble, c };
+  auto const wt_pwm_1 = WT_PWM_1{ ensemble, c, use_bias };
   WT_PWM_2   wt_pwm_2;
   if (order > 1)
-    wt_pwm_2 = WT_PWM_2{ ensemble, c };
+    wt_pwm_2 = WT_PWM_2{ ensemble, c, use_bias };
   WT_PWM_3 wt_pwm_3;
   if (order > 2)
-    wt_pwm_3 = WT_PWM_3{ ensemble, c };
+    wt_pwm_3 = WT_PWM_3{ ensemble, c, use_bias };
 
   for (auto const &mutant : mutants)
   {
@@ -705,21 +794,21 @@ void
           ofs << ";";
         else
           // ofs << ";" << std::get<2>(pwms).evaluate(sequence, use_threads);
-          ofs << ";" << wt_pwm_3.evaluate(ensemble, mutant, c);
+          ofs << ";" << wt_pwm_3.evaluate(ensemble, mutant, c, use_bias);
         [[fallthrough]];
       case 2:
         if (not mutant.valid_mutation)
           ofs << ";";
         else
           // ofs << ";" << std::get<1>(pwms).evaluate(sequence, use_threads);
-          ofs << ";" << wt_pwm_2.evaluate(ensemble, mutant, c);
+          ofs << ";" << wt_pwm_2.evaluate(ensemble, mutant, c, use_bias);
         [[fallthrough]];
       case 1:
         if (not mutant.valid_mutation)
           ofs << ";";
         else
           //  ofs << ";" << std::get<0>(pwms).evaluate(sequence, use_threads);
-          ofs << ";" << wt_pwm_1.evaluate(ensemble, mutant, c);
+          ofs << ";" << wt_pwm_1.evaluate(ensemble, mutant, c, use_bias);
     }
     ofs << "\n";
   }
@@ -734,7 +823,8 @@ void
             int                                           order,
             int                                           true_offset,
             bool                                          use_threads,
-            double                                        c)
+            double                                        c,
+            bool                                          use_bias)
 {
   assert(order < 5 and order > 0);
   std::ofstream ofs{ out_file_name + ".scores" };
@@ -785,25 +875,29 @@ void
         if (not valid_mutation)
           ofs << ";";
         else
-          ofs << ";" << std::get<3>(pwms).evaluate(sequence, use_threads, c);
+          ofs << ";"
+              << std::get<3>(pwms).evaluate(sequence, use_threads, c, use_bias);
         [[fallthrough]];
       case 3:
         if (not valid_mutation)
           ofs << ";";
         else
-          ofs << ";" << std::get<2>(pwms).evaluate(sequence, use_threads, c);
+          ofs << ";"
+              << std::get<2>(pwms).evaluate(sequence, use_threads, c, use_bias);
         [[fallthrough]];
       case 2:
         if (not valid_mutation)
           ofs << ";";
         else
-          ofs << ";" << std::get<1>(pwms).evaluate(sequence, use_threads, c);
+          ofs << ";"
+              << std::get<1>(pwms).evaluate(sequence, use_threads, c, use_bias);
         [[fallthrough]];
       case 1:
         if (not valid_mutation)
           ofs << ";";
         else
-          ofs << ";" << std::get<0>(pwms).evaluate(sequence, use_threads, c);
+          ofs << ";"
+              << std::get<0>(pwms).evaluate(sequence, use_threads, c, use_bias);
     }
     ofs << "\n";
   }
@@ -816,7 +910,8 @@ void
          std::vector<Sequence> const                  &sequences,
          std::tuple<PWM_1, PWM_2, PWM_3, PWM_4> const &pwms,
          int                                           order,
-         double                                        c)
+         double                                        c,
+         bool                                          use_bias)
 {
   assert(order < 5 and order > 0);
   std::ofstream ofs{ out_file_name + ".scores" };
@@ -844,16 +939,24 @@ void
     switch (order)
     {
       case 4:
-        ofs << "," << std::get<3>(pwms).evaluate(sequence.sequence, false, c);
+        ofs << ","
+            << std::get<3>(pwms).evaluate(
+                   sequence.sequence, false, c, use_bias);
         [[fallthrough]];
       case 3:
-        ofs << "," << std::get<2>(pwms).evaluate(sequence.sequence, false, c);
+        ofs << ","
+            << std::get<2>(pwms).evaluate(
+                   sequence.sequence, false, c, use_bias);
         [[fallthrough]];
       case 2:
-        ofs << "," << std::get<1>(pwms).evaluate(sequence.sequence, false, c);
+        ofs << ","
+            << std::get<1>(pwms).evaluate(
+                   sequence.sequence, false, c, use_bias);
         [[fallthrough]];
       case 1:
-        ofs << "," << std::get<0>(pwms).evaluate(sequence.sequence, false, c);
+        ofs << ","
+            << std::get<0>(pwms).evaluate(
+                   sequence.sequence, false, c, use_bias);
     }
     ofs << "\n";
   }
